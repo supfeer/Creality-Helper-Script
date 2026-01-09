@@ -105,6 +105,16 @@ function set_paths() {
   USEFUL_MACROS_FILE="${HS_CONFIG_FOLDER}/useful-macros.cfg"
   USEFUL_MACROS_URL="${HS_FILES}/macros/useful-macros.cfg"
   USEFUL_MACROS_3V3_URL="${HS_FILES}/macros/useful-macros-3v3.cfg"
+
+  # K2PLUS Macros #
+  M191_MACRO_FILE="${HS_CONFIG_FOLDER}/m191.cfg"
+  M191_MACRO_URL="${HS_FILES}/macros/m191.cfg"
+  START_PRINT_MACRO_FILE="${HS_CONFIG_FOLDER}/start_print.cfg"
+  START_PRINT_MACRO_URL="${HS_FILES}/macros/start_print.cfg"
+  BED_MESH_MACRO_FILE="${HS_CONFIG_FOLDER}/bed_mesh.cfg"
+  BED_MESH_MACRO_URL="${HS_FILES}/macros/bed_mesh.cfg"
+  OVERRIDES_MACRO_FILE="${HS_CONFIG_FOLDER}/overrides.cfg"
+  OVERRIDES_MACRO_URL="${HS_FILES}/macros/overrides.cfg"
   
   # Save Z-Offset Macros #
   SAVE_ZOFFSET_FILE="${HS_CONFIG_FOLDER}/save-zoffset.cfg"

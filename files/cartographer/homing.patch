@@ -1,0 +1,17 @@
+--- homing.py.orig
++++ homing.py
+@@ -43,7 +43,12 @@
+         if toolhead is None:
+             toolhead = printer.lookup_object('toolhead')
+ 
+-        self.prtouch_v3 = printer.lookup_object('prtouch_v3')
+-        self.prtouch_v3.z_full_movement_flag = False
++        self.prtouch_v3 = None
++        if self.printer.objects.get('scanner'):
++            self.prtouch_v3 = self.printer.lookup_object('scanner')
++        elif self.printer.objects.get('prtouch_v3'):
++            self.prtouch_v3 = self.printer.lookup_object('prtouch_v3')
++        if self.prtouch_v3 is not None:
++            self.prtouch_v3.z_full_movement_flag = False
+         self.toolhead = toolhead
+         self.stepper_positions = []

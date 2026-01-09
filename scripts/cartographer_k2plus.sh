@@ -304,16 +304,10 @@ function install_cartographer_k2plus() {
   _cartographer_require_k2plus
   export PATH="/opt/bin:/opt/sbin:$PATH"
 
-  local install_script_primary="/mnt/UDISK/root/k2-improvements/features/cartographer/install.sh"
-  local install_script_fallback="${HELPER_SCRIPT_FOLDER}/k2-improvements-main/features/cartographer/install.sh"
-  local install_script="$install_script_primary"
+  local install_script="${HELPER_SCRIPT_FOLDER}/files/cartographer/install.sh"
 
   if [ ! -f "$install_script" ]; then
-    install_script="$install_script_fallback"
-  fi
-
-  if [ ! -f "$install_script" ]; then
-    echo "Cartographer install script not found: $install_script_primary or $install_script_fallback"
+    echo "Cartographer install script not found: $install_script"
     return 1
   fi
 
