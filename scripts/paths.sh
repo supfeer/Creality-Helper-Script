@@ -115,6 +115,7 @@ function set_paths() {
   SCREWS_ADJUST_URL="${HS_FILES}/screws-tilt-adjust/screws_tilt_adjust.py"
   SCREWS_ADJUST_K1_URL="${HS_FILES}/screws-tilt-adjust/screws-tilt-adjust-k1.cfg"
   SCREWS_ADJUST_K1M_URL="${HS_FILES}/screws-tilt-adjust/screws-tilt-adjust-k1max.cfg"
+  SCREWS_ADJUST_K2PLUS_URL="${HS_FILES}/screws-tilt-adjust/screws-tilt-adjust-k2plus.cfg"
   SCREWS_ADJUST_3KE_URL="${HS_FILES}/screws-tilt-adjust/screws-tilt-adjust-3ke.cfg"
   SCREWS_ADJUST_E5M_URL="${HS_FILES}/screws-tilt-adjust/screws-tilt-adjust-e5m.cfg"
   

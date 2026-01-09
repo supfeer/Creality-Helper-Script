@@ -10,6 +10,10 @@ fi
 get_model=$( /usr/bin/get_sn_mac.sh model 2>&1 )
 if echo "$get_model" | grep -iq "K1"; then 
   model="K1"
+elif echo "$get_model" | grep -iq "K2"; then
+  model="K2PLUS"
+elif echo "$get_model" | grep -iq "F008"; then
+  model="K2PLUS"
 elif echo "$get_model" | grep -iq "F001"; then 
   model="3V3"
 elif echo "$get_model" | grep -iq "F002"; then 
@@ -41,6 +45,8 @@ function script_title() {
   local title
   if [ "$model" = "K1" ]; then
     title="K1 SERIES"
+  elif [ "$model" = "K2PLUS" ]; then
+    title="K2PLUS"
   elif [ "$model" = "3V3" ]; then
     title="ENDER-3 V3 SERIES"
   elif [ "$model" = "3KE" ]; then
@@ -89,6 +95,8 @@ function main_menu() {
       1) clear
          if [ "$model" = "K1" ]; then
            install_menu_k1
+         elif [ "$model" = "K2PLUS" ]; then
+           install_menu_k2plus
          elif [ "$model" = "3V3" ]; then
            install_menu_3v3
          elif [ "$model" = "3KE" ]; then
@@ -102,6 +110,8 @@ function main_menu() {
       2) clear
          if [ "$model" = "K1" ]; then
            remove_menu_k1
+         elif [ "$model" = "K2PLUS" ]; then
+           remove_menu_k2plus
          elif [ "$model" = "3V3" ]; then
            remove_menu_3v3
          elif [ "$model" = "3KE" ]; then
@@ -115,6 +125,8 @@ function main_menu() {
       3) clear
          if [ "$model" = "K1" ]; then
            customize_menu_k1
+         elif [ "$model" = "K2PLUS" ]; then
+           customize_menu_k2plus
          elif [ "$model" = "3V3" ]; then
            customize_menu_3v3
          elif [ "$model" = "3KE" ]; then
@@ -131,6 +143,8 @@ function main_menu() {
       5) clear
          if [ "$model" = "K1" ]; then
            tools_menu_k1
+         elif [ "$model" = "K2PLUS" ]; then
+           tools_menu_k2plus
          elif [ "$model" = "3V3" ]; then
            tools_menu_3v3
          elif [ "$model" = "3KE" ]; then
@@ -144,6 +158,8 @@ function main_menu() {
       6) clear
          if [ "$model" = "K1" ]; then
            info_menu_k1
+         elif [ "$model" = "K2PLUS" ]; then
+           info_menu_k2plus
          elif [ "$model" = "3V3" ]; then
            info_menu_3v3
          elif [ "$model" = "3KE" ]; then
