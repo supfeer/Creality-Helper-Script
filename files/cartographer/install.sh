@@ -82,26 +82,18 @@ pattern = re.compile(
 )
 match = pattern.search(text)
 if not match:
-    sys.stderr.write("E: unsupported homing.py format for patch
-")
+    sys.stderr.write("E: unsupported homing.py format for patch\n")
     sys.exit(1)
 
-indent = match.group('indent')
+indent = match.group("indent")
 replacement = (
-    f"{indent}self.prtouch_v3 = None
-"
-    f"{indent}if self.printer.objects.get('scanner'):
-"
-    f"{indent}    self.prtouch_v3 = self.printer.lookup_object('scanner')
-"
-    f"{indent}elif self.printer.objects.get('prtouch_v3'):
-"
-    f"{indent}    self.prtouch_v3 = self.printer.lookup_object('prtouch_v3')
-"
-    f"{indent}if self.prtouch_v3 is not None:
-"
-    f"{indent}    self.prtouch_v3.z_full_movement_flag = False
-"
+    f"{indent}self.prtouch_v3 = None\n"
+    f"{indent}if self.printer.objects.get('scanner'):\n"
+    f"{indent}    self.prtouch_v3 = self.printer.lookup_object('scanner')\n"
+    f"{indent}elif self.printer.objects.get('prtouch_v3'):\n"
+    f"{indent}    self.prtouch_v3 = self.printer.lookup_object('prtouch_v3')\n"
+    f"{indent}if self.prtouch_v3 is not None:\n"
+    f"{indent}    self.prtouch_v3.z_full_movement_flag = False\n"
 )
 
 text = pattern.sub(replacement, text, count=1)
@@ -109,6 +101,7 @@ path.write_text(text)
 print("I: homing.py patched for scanner")
 PY_HOMING
 }
+
 
 BACKUP_DIR="/tmp/cartographer-backup-$(date +%s)"
 
