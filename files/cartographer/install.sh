@@ -103,6 +103,20 @@ PY_HOMING
 }
 
 
+disable_prtouch_includes() {
+    local cfg_file="$1"
+    [ -f "$cfg_file" ] || return 0
+    awk '{
+        line=$0
+        if (line ~ /^\[include/ && line ~ /prtouch_v3\.cfg/ && line !~ /^#/) {
+            print "#" line
+        } else {
+            print line
+        }
+    }' "$cfg_file" > "${cfg_file}.tmp" && mv "${cfg_file}.tmp" "$cfg_file"
+}
+
+
 BACKUP_DIR="/tmp/cartographer-backup-$(date +%s)"
 
 backup_file() {
@@ -244,6 +258,8 @@ chmod +x /mnt/UDISK/bin/cartographer.sh
 
 # remove the prtouch_v3 section from printer.cfg
 python ${SCRIPT_DIR}/alter_config.py
+disable_prtouch_includes "$PRINTER_CFG"
+disable_prtouch_includes "$CUSTOM_MAIN"
 # add a commented include to custom/main.cfg
 python ${SCRIPT_DIR}/ensure_included.py \
     "${PRINTER_DATA_DIR}/config/custom/main.cfg" prtouch_v3.cfg True
