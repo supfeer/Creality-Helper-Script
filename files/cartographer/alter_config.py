@@ -77,9 +77,16 @@ def main():
     Example usage of the remove_section_from_ini function.
     """
     # Example usage
-    input_file = "~/printer_data/config/printer.cfg"
+    printer_data_dir = os.environ.get("PRINTER_DATA_DIR")
+    if not printer_data_dir:
+        if os.path.isdir("/mnt/UDISK/printer_data"):
+            printer_data_dir = "/mnt/UDISK/printer_data"
+        else:
+            printer_data_dir = os.path.expanduser("~/printer_data")
+
+    input_file = os.path.join(printer_data_dir, "config/printer.cfg")
     section_to_remove = "prtouch_v3"
-    backup_dir = "~/printer_data/config/custom"
+    backup_dir = os.path.join(printer_data_dir, "config/custom")
 
     success, message = remove_section_from_ini(input_file, section_to_remove, backup_dir)
     print(message)

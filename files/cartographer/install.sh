@@ -7,14 +7,60 @@ cd ${HOME}
 
 export TMPDIR=/mnt/UDISK/tmp
 
+PRINTER_DATA_DIR="/mnt/UDISK/printer_data"
+if [ ! -d "$PRINTER_DATA_DIR" ]; then
+    PRINTER_DATA_DIR="${HOME}/printer_data"
+fi
+
+export PRINTER_DATA_DIR
+
 HOMING_DIR=$(readlink -f ~/klipper/klippy/extras)
 HOMING_FILE="${HOMING_DIR}/homing.py"
 BED_MESH_FILE="${HOMING_DIR}/bed_mesh.py"
-PRINTER_CFG="${HOME}/printer_data/config/printer.cfg"
-CUSTOM_DIR="${HOME}/printer_data/config/custom"
+PRINTER_CFG="${PRINTER_DATA_DIR}/config/printer.cfg"
+CUSTOM_DIR="${PRINTER_DATA_DIR}/config/custom"
 CUSTOM_MAIN="${CUSTOM_DIR}/main.cfg"
 CARTOGRAPHER_CFG="${CUSTOM_DIR}/cartographer.cfg"
 PRTOUCH_CFG="${CUSTOM_DIR}/prtouch_v3.cfg"
+PATCH_MODE=""
+
+precheck() {
+    if [ ! -f "$HOMING_FILE" ]; then
+        echo "E: homing.py not found at $HOMING_FILE"
+        exit 1
+    fi
+    if [ ! -f "$BED_MESH_FILE" ]; then
+        echo "E: bed_mesh.py not found at $BED_MESH_FILE"
+        exit 1
+    fi
+    if [ ! -d "$PRINTER_DATA_DIR" ]; then
+        echo "E: printer_data not found at $PRINTER_DATA_DIR"
+        exit 1
+    fi
+    if ! command -v git >/dev/null 2>&1; then
+        echo "E: git not found"
+        exit 1
+    fi
+    if ! command -v patch >/dev/null 2>&1; then
+        echo "E: patch not found"
+        exit 1
+    fi
+    if [ ! -d "$CUSTOM_DIR" ]; then
+        mkdir -p "$CUSTOM_DIR"
+    fi
+
+    if grep -q "lookup_object('scanner')" "$HOMING_FILE"; then
+        PATCH_MODE="skip"
+    elif grep -q "self.prtouch_v3 = self.printer.lookup_object('prtouch_v3') if self.printer.objects.get('prtouch_v3') else None" "$HOMING_FILE"; then
+        PATCH_MODE="scanner_conditional"
+    elif grep -q "self.prtouch_v3 = printer.lookup_object('prtouch_v3')" "$HOMING_FILE"; then
+        PATCH_MODE="legacy"
+    else
+        echo "E: unsupported homing.py format, aborting"
+        exit 1
+    fi
+}
+
 BACKUP_DIR="/tmp/cartographer-backup-$(date +%s)"
 
 backup_file() {
@@ -56,6 +102,8 @@ on_exit() {
     fi
 }
 trap 'on_exit' EXIT
+
+precheck
 
 mkdir -p "$BACKUP_DIR"
 backup_file "$HOMING_FILE" homing.py
@@ -156,24 +204,24 @@ chmod +x /mnt/UDISK/bin/cartographer.sh
 python ${SCRIPT_DIR}/alter_config.py
 # add a commented include to custom/main.cfg
 python ${SCRIPT_DIR}/ensure_included.py \
-    ~/printer_data/config/custom/main.cfg prtouch_v3.cfg True
+    "${PRINTER_DATA_DIR}/config/custom/main.cfg" prtouch_v3.cfg True
 # add the main.cfg to printer.cfg
 python ${SCRIPT_DIR}/ensure_included.py \
-    ~/printer_data/config/printer.cfg custom/main.cfg
+    "${PRINTER_DATA_DIR}/config/printer.cfg" custom/main.cfg
 # I believe I still want this as a true copy
 # add the cartographer.cfg to main.cfg
-cp ${SCRIPT_DIR}/cartographer.cfg ~/printer_data/config/custom
-python ${SCRIPT_DIR}/ensure_included.py ~/printer_data/config/custom/main.cfg cartographer.cfg
+cp ${SCRIPT_DIR}/cartographer.cfg "${PRINTER_DATA_DIR}/config/custom"
+python ${SCRIPT_DIR}/ensure_included.py "${PRINTER_DATA_DIR}/config/custom/main.cfg" cartographer.cfg
 
 # patch homing.py for scanner support
-if grep -q "lookup_object('scanner')" "$HOMING_FILE"; then
+if [ "$PATCH_MODE" = "skip" ]; then
     echo "I: homing.py already patched for scanner"
-elif grep -q "self.prtouch_v3 = self.printer.lookup_object('prtouch_v3') if self.printer.objects.get('prtouch_v3') else None" "$HOMING_FILE"; then
+elif [ "$PATCH_MODE" = "scanner_conditional" ]; then
     echo "I: applying homing scanner patch (conditional prtouch_v3)"
-    patch -d "$HOMING_DIR" -p0 < "${SCRIPT_DIR}/homing.scanner.patch"
-elif grep -q "self.prtouch_v3 = printer.lookup_object('prtouch_v3')" "$HOMING_FILE"; then
+    (cd "$HOMING_DIR" && patch -p0 -N -i "${SCRIPT_DIR}/homing.scanner.patch")
+elif [ "$PATCH_MODE" = "legacy" ]; then
     echo "I: applying homing scanner patch (legacy)"
-    patch -d "$HOMING_DIR" -p0 < "${SCRIPT_DIR}/homing.patch"
+    (cd "$HOMING_DIR" && patch -p0 -N -i "${SCRIPT_DIR}/homing.patch")
 else
     echo "E: unsupported homing.py format, aborting"
     exit 1
