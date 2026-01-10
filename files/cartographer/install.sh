@@ -83,9 +83,19 @@ fi
 #TODO: how do we detect if we should upgrade?
 upgrade_pip() {
     echo "I: upgrading klippy-env pip version"
-    wget https://bootstrap.pypa.io/get-pip.py
-    ~/klippy-env/bin/python3 ./get-pip.py
-    rm -f ./get-pip.py
+    local pip_url="https://bootstrap.pypa.io/get-pip.py"
+    local pip_file="${PWD}/get-pip.py"
+    rm -f "$pip_file"
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL --retry 3 --retry-delay 2 -o "$pip_file" "$pip_url"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -O "$pip_file" "$pip_url"
+    else
+        echo "E: curl or wget not found"
+        return 1
+    fi
+    ~/klippy-env/bin/python3 "$pip_file"
+    rm -f "$pip_file"
 }
 upgrade_pip
 
