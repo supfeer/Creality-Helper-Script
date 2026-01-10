@@ -41,24 +41,73 @@ precheck() {
         echo "E: git not found"
         exit 1
     fi
-    if ! command -v patch >/dev/null 2>&1; then
-        echo "E: patch not found"
-        exit 1
-    fi
     if [ ! -d "$CUSTOM_DIR" ]; then
         mkdir -p "$CUSTOM_DIR"
     fi
 
     if grep -q "lookup_object('scanner')" "$HOMING_FILE"; then
         PATCH_MODE="skip"
-    elif grep -q "self.prtouch_v3 = self.printer.lookup_object('prtouch_v3') if self.printer.objects.get('prtouch_v3') else None" "$HOMING_FILE"; then
-        PATCH_MODE="scanner_conditional"
-    elif grep -q "self.prtouch_v3 = printer.lookup_object('prtouch_v3')" "$HOMING_FILE"; then
-        PATCH_MODE="legacy"
+    elif grep -q "prtouch_v3" "$HOMING_FILE" && grep -q "z_full_movement_flag" "$HOMING_FILE"; then
+        PATCH_MODE="apply"
     else
         echo "E: unsupported homing.py format, aborting"
         exit 1
     fi
+}
+
+apply_homing_patch() {
+    local py_bin="python3"
+    if ! command -v "$py_bin" >/dev/null 2>&1; then
+        py_bin="python"
+    fi
+    if ! command -v "$py_bin" >/dev/null 2>&1; then
+        echo "E: python not found for homing patch"
+        exit 1
+    fi
+    "$py_bin" - "$HOMING_FILE" <<'PY_HOMING'
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text()
+if "lookup_object('scanner')" in text or 'lookup_object("scanner")' in text:
+    print("I: homing.py already patched for scanner")
+    sys.exit(0)
+
+pattern = re.compile(
+    r"^(?P<indent>\s*)self\.prtouch_v3\s*=.*lookup_object\([\"\']prtouch_v3[\"\']\).*\n"
+    r"(?P=indent)self\.prtouch_v3\.z_full_movement_flag\s*=\s*False\s*$",
+    re.M,
+)
+match = pattern.search(text)
+if not match:
+    sys.stderr.write("E: unsupported homing.py format for patch
+")
+    sys.exit(1)
+
+indent = match.group('indent')
+replacement = (
+    f"{indent}self.prtouch_v3 = None
+"
+    f"{indent}if self.printer.objects.get('scanner'):
+"
+    f"{indent}    self.prtouch_v3 = self.printer.lookup_object('scanner')
+"
+    f"{indent}elif self.printer.objects.get('prtouch_v3'):
+"
+    f"{indent}    self.prtouch_v3 = self.printer.lookup_object('prtouch_v3')
+"
+    f"{indent}if self.prtouch_v3 is not None:
+"
+    f"{indent}    self.prtouch_v3.z_full_movement_flag = False
+"
+)
+
+text = pattern.sub(replacement, text, count=1)
+path.write_text(text)
+print("I: homing.py patched for scanner")
+PY_HOMING
 }
 
 BACKUP_DIR="/tmp/cartographer-backup-$(date +%s)"
@@ -216,15 +265,9 @@ python ${SCRIPT_DIR}/ensure_included.py "${PRINTER_DATA_DIR}/config/custom/main.
 # patch homing.py for scanner support
 if [ "$PATCH_MODE" = "skip" ]; then
     echo "I: homing.py already patched for scanner"
-elif [ "$PATCH_MODE" = "scanner_conditional" ]; then
-    echo "I: applying homing scanner patch (conditional prtouch_v3)"
-    (cd "$HOMING_DIR" && patch -p0 -N -i "${SCRIPT_DIR}/homing.scanner.patch")
-elif [ "$PATCH_MODE" = "legacy" ]; then
-    echo "I: applying homing scanner patch (legacy)"
-    (cd "$HOMING_DIR" && patch -p0 -N -i "${SCRIPT_DIR}/homing.patch")
 else
-    echo "E: unsupported homing.py format, aborting"
-    exit 1
+    echo "I: applying homing scanner patch"
+    apply_homing_patch
 fi
 rm -f "${HOMING_FILE}c"
 
