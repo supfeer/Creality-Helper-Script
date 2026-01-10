@@ -23,14 +23,22 @@ do
 done
 
 echo -e "Info: Downloading opkg package manager from Entware repo..."
-chmod 755 /usr/data/helper-script/files/fixes/curl
+if command -v curl >/dev/null 2>&1; then
+  CURL_BIN="$(command -v curl)"
+elif [ -x /usr/data/helper-script/files/fixes/curl ]; then
+  CURL_BIN="/usr/data/helper-script/files/fixes/curl"
+  chmod 755 "$CURL_BIN"
+else
+  echo "Error: curl not found. Install curl or run bootstrap again."
+  exit 1
+fi
 primary_URL="https://bin.entware.net/mipselsf-k3.4/installer"
 secondary_URL="http://www.openk1.org/static/entware/mipselsf-k3.4/installer"
 
 download_files() {
   local url="$1"
   local output_file="$2"
-  /usr/data/helper-script/files/fixes/curl -L "$url" -o "$output_file"
+  "$CURL_BIN" -L "$url" -o "$output_file"
   return $?
 }
 

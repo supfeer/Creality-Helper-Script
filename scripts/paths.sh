@@ -14,7 +14,13 @@ function set_paths() {
   red=`echo -en "\033[01;31m"`
 
   # System #
-  CURL="${HELPER_SCRIPT_FOLDER}/files/fixes/curl"
+  if command -v curl >/dev/null 2>&1; then
+    CURL="$(command -v curl)"
+  elif [ -x "${HELPER_SCRIPT_FOLDER}/files/fixes/curl" ]; then
+    CURL="${HELPER_SCRIPT_FOLDER}/files/fixes/curl"
+  else
+    CURL="curl"
+  fi
   INITD_FOLDER="/etc/init.d"
   USR_DATA="/usr/data"
   USR_SHARE="/usr/share"
@@ -202,6 +208,8 @@ function set_paths() {
 
 function set_permissions() {
 
-  chmod +x "$CURL" >/dev/null 2>&1 &
+  if [ "$CURL" = "${HELPER_SCRIPT_FOLDER}/files/fixes/curl" ]; then
+    chmod +x "$CURL" >/dev/null 2>&1 &
+  fi
 
 }
