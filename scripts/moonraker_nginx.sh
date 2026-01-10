@@ -59,6 +59,7 @@ function install_moonraker_nginx(){
         cp "$MOONRAKER_URL3" "$PRINTER_DATA_FOLDER"/moonraker.asvc
         echo -e "Info: Applying changes from official repo..."
         cd "$MOONRAKER_FOLDER"/moonraker
+        git config --global --add safe.directory "$MOONRAKER_FOLDER"/moonraker
         git stash; git checkout master; git pull
         echo -e "Info: Installing Supervisor Lite..."
         chmod 755 "$SUPERVISOR_URL"
@@ -159,6 +160,7 @@ function install_moonraker_3v3(){
         cp "$MOONRAKER_URL3" "$PRINTER_DATA_FOLDER"/moonraker.asvc
         echo -e "Info: Applying changes from official repo..."
         cd "$MOONRAKER_FOLDER"/moonraker
+        git config --global --add safe.directory "$MOONRAKER_FOLDER"/moonraker
         git stash; git checkout master; git pull
         echo -e "Info: Installing Supervisor Lite..."
         chmod 755 "$SUPERVISOR_URL"
