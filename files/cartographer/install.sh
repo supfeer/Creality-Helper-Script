@@ -49,7 +49,13 @@ rollback() {
     fi
 }
 
-trap 'rollback' ERR
+SUCCESS=0
+on_exit() {
+    if [ "$SUCCESS" -eq 0 ]; then
+        rollback
+    fi
+}
+trap 'on_exit' EXIT
 
 mkdir -p "$BACKUP_DIR"
 backup_file "$HOMING_FILE" homing.py
@@ -153,3 +159,5 @@ ln -sf "${SCRIPT_DIR}/bed_mesh.py" "${BED_MESH_FILE}"
 
 # restart klipper
 /etc/init.d/klipper restart
+
+SUCCESS=1
