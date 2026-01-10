@@ -24,7 +24,11 @@ function set_paths() {
   INITD_FOLDER="/etc/init.d"
   USR_DATA="/usr/data"
   USR_SHARE="/usr/share"
-  PRINTER_DATA_FOLDER="$USR_DATA/printer_data"
+  if [ -d "/mnt/UDISK/printer_data" ]; then
+    PRINTER_DATA_FOLDER="/mnt/UDISK/printer_data"
+  else
+    PRINTER_DATA_FOLDER="$USR_DATA/printer_data"
+  fi
 
   # Helper Script #
   HS_FILES="${HELPER_SCRIPT_FOLDER}/files"
