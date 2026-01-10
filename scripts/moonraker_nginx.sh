@@ -42,10 +42,8 @@ function install_moonraker_nginx(){
         echo -e "Info: Extracting Nginx files..."
         tar -xvf "$NGINX_URL" -C "$USR_DATA"
         echo -e "Info: Copying services files..."
-        if [ ! -f "$INITD_FOLDER"/S50nginx ]; then
-          cp "$NGINX_SERVICE_URL" "$INITD_FOLDER"/S50nginx
-          chmod +x "$INITD_FOLDER"/S50nginx
-        fi
+        cp "$NGINX_SERVICE_URL" "$INITD_FOLDER"/S50nginx
+        chmod +x "$INITD_FOLDER"/S50nginx
         if [ ! -f "$INITD_FOLDER"/S56moonraker_service ]; then
           cp "$MOONRAKER_SERVICE_URL" "$INITD_FOLDER"/S56moonraker_service
           chmod +x "$INITD_FOLDER"/S56moonraker_service

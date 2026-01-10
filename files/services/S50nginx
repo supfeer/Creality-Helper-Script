@@ -7,26 +7,62 @@ NGINX="/usr/data/nginx/sbin/nginx"
 PIDFILE="/var/run/nginx.pid"
 NGINX_ARGS="-c /usr/data/nginx/nginx/nginx.conf"
 
+pick_nginx() {
+  if [ -x "$NGINX" ]; then
+    "$NGINX" -v >/dev/null 2>&1 && return 0
+  fi
+
+  if command -v nginx >/dev/null 2>&1; then
+    NGINX="$(command -v nginx)"
+    if [ -f "/usr/data/nginx/nginx/nginx.conf" ]; then
+      NGINX_ARGS="-c /usr/data/nginx/nginx/nginx.conf"
+    elif [ -f "/etc/nginx/nginx.conf" ]; then
+      NGINX_ARGS="-c /etc/nginx/nginx.conf"
+    else
+      NGINX_ARGS=""
+    fi
+    return 0
+  fi
+
+  return 1
+}
+
 case "$1" in
   start)
+    if ! pick_nginx; then
+      echo "Nginx binary not found."
+      exit 1
+    fi
     echo "Starting nginx..."
-	mkdir -p /var/log/nginx /var/tmp/nginx
-	start-stop-daemon -S -p "$PIDFILE" --exec "$NGINX" -- $NGINX_ARGS
-	;;
+    mkdir -p /var/log/nginx /var/tmp/nginx
+    if [ -n "$NGINX_ARGS" ]; then
+      start-stop-daemon -S -p "$PIDFILE" --exec "$NGINX" -- $NGINX_ARGS
+    else
+      start-stop-daemon -S -p "$PIDFILE" --exec "$NGINX"
+    fi
+    ;;
   stop)
+    if ! pick_nginx; then
+      echo "Nginx binary not found; none killed"
+      exit 0
+    fi
     echo "Stopping nginx..."
-	start-stop-daemon -K -x "$NGINX" -p "$PIDFILE" -o
-	;;
+    start-stop-daemon -K -x "$NGINX" -p "$PIDFILE" -o
+    ;;
   reload|force-reload)
+    if ! pick_nginx; then
+      echo "Nginx binary not found."
+      exit 1
+    fi
     echo "Reloading nginx..."
-	"$NGINX" -s reload
-	;;
+    "$NGINX" -s reload
+    ;;
   restart)
-	"$0" stop
-	sleep 1
-	"$0" start
-	;;
+    "$0" stop
+    sleep 1
+    "$0" start
+    ;;
   *)
-	echo "Usage: $0 {start|stop|restart|reload|force-reload}"
-	exit 1
+    echo "Usage: $0 {start|stop|restart|reload|force-reload}"
+    exit 1
 esac
