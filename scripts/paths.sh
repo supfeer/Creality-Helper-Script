@@ -29,6 +29,9 @@ function set_paths() {
   else
     PRINTER_DATA_FOLDER="$USR_DATA/printer_data"
   fi
+  if [ "$PRINTER_DATA_FOLDER" = "/mnt/UDISK/printer_data" ] && [ ! -e "$USR_DATA/printer_data" ]; then
+    ln -sf "$PRINTER_DATA_FOLDER" "$USR_DATA/printer_data"
+  fi
 
   # Helper Script #
   HS_FILES="${HELPER_SCRIPT_FOLDER}/files"

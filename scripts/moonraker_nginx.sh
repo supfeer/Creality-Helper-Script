@@ -60,7 +60,10 @@ function install_moonraker_nginx(){
         echo -e "Info: Applying changes from official repo..."
         cd "$MOONRAKER_FOLDER"/moonraker
         git config --global --add safe.directory "$MOONRAKER_FOLDER"/moonraker
-        git stash; git checkout master; git pull
+        git fetch origin master
+        git checkout master
+        git reset --hard FETCH_HEAD
+        git clean -fd
         echo -e "Info: Installing Supervisor Lite..."
         chmod 755 "$SUPERVISOR_URL"
         ln -sf "$SUPERVISOR_URL" "$SUPERVISOR_FILE"
@@ -161,7 +164,10 @@ function install_moonraker_3v3(){
         echo -e "Info: Applying changes from official repo..."
         cd "$MOONRAKER_FOLDER"/moonraker
         git config --global --add safe.directory "$MOONRAKER_FOLDER"/moonraker
-        git stash; git checkout master; git pull
+        git fetch origin master
+        git checkout master
+        git reset --hard FETCH_HEAD
+        git clean -fd
         echo -e "Info: Installing Supervisor Lite..."
         chmod 755 "$SUPERVISOR_URL"
         ln -sf "$SUPERVISOR_URL" "$SUPERVISOR_FILE"
