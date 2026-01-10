@@ -80,8 +80,11 @@ if [ -L klippy-env ]; then
     rsync -SHa /usr/share/klippy-env/ klippy-env/
 fi
 
-#TODO: how do we detect if we should upgrade?
-upgrade_pip() {
+ensure_pip() {
+    if ~/klippy-env/bin/pip --version >/dev/null 2>&1; then
+        echo "I: pip already available, skipping upgrade"
+        return 0
+    fi
     echo "I: upgrading klippy-env pip version"
     local pip_url="https://bootstrap.pypa.io/get-pip.py"
     local pip_file="${PWD}/get-pip.py"
@@ -97,7 +100,7 @@ upgrade_pip() {
     ~/klippy-env/bin/python3 "$pip_file"
     rm -f "$pip_file"
 }
-upgrade_pip
+ensure_pip
 
 # ensure we are pulling wheels from piwheels
 if ! grep -q 'extra-index-url=https://www.piwheels.org/simple' /etc/pip.conf; then
@@ -105,11 +108,24 @@ if ! grep -q 'extra-index-url=https://www.piwheels.org/simple' /etc/pip.conf; th
 fi
 
 # install requirements
-echo "I: installing cartographer requirements"
-~/klippy-env/bin/pip \
-    install \
-    --upgrade \
-    --requirement cartographer-klipper/requirements.txt
+REQ_FILE="cartographer-klipper/requirements.txt"
+REQ_HASH_FILE="${HOME}/.cartographer_requirements_hash"
+REQ_HASH=""
+if command -v sha1sum >/dev/null 2>&1; then
+    REQ_HASH=$(sha1sum "$REQ_FILE" | awk '{print $1}')
+elif command -v md5sum >/dev/null 2>&1; then
+    REQ_HASH=$(md5sum "$REQ_FILE" | awk '{print $1}')
+fi
+
+if [ -n "$REQ_HASH" ] && [ -f "$REQ_HASH_FILE" ] && [ "$(cat "$REQ_HASH_FILE")" = "$REQ_HASH" ]; then
+    echo "I: cartographer requirements already satisfied, skipping"
+else
+    echo "I: installing cartographer requirements"
+    ~/klippy-env/bin/pip         install         --upgrade         --requirement "$REQ_FILE"
+    if [ -n "$REQ_HASH" ]; then
+        echo "$REQ_HASH" > "$REQ_HASH_FILE"
+    fi
+fi
 
 # fix the klippy-env libraries
 python3 ${SCRIPT_DIR}/fix_venv.py ~/klippy-env
@@ -126,7 +142,8 @@ echo "I: installing cartographer"
 mkdir -p /mnt/UDISK/bin
 ln -sf  ${SCRIPT_DIR}/usb_bridge /mnt/UDISK/bin/usb_bridge
 chmod +x /mnt/UDISK/bin/usb_bridge
-ln -s ${SCRIPT_DIR}/cartographer.sh /mnt/UDISK/bin/cartographer.sh
+rm -f /mnt/UDISK/bin/cartographer.sh
+ln -sf ${SCRIPT_DIR}/cartographer.sh /mnt/UDISK/bin/cartographer.sh
 ln -sf ${SCRIPT_DIR}/cartographer.init /etc/init.d/cartographer
 ln -sf ${SCRIPT_DIR}/cartographer.init /opt/etc/init.d/S50cartographer
 /etc/init.d/cartographer start
