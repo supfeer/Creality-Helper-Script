@@ -73,6 +73,8 @@ function set_paths() {
   KLIPPER_SERVICE_URL="${HS_FILES}/services/S55klipper_service"
   KLIPPER_GCODE_URL="${HS_FILES}/fixes/gcode.py"
   KLIPPER_GCODE_3V3_URL="${HS_FILES}/fixes/gcode_3v3.py"
+  KLIPPER_VIRTUAL_SDCARD_TEMP_PATCH_URL="${HS_FILES}/fixes/virtual_sdcard_temp_fix.patch"
+  KLIPPER_VIRTUAL_SDCARD_BED_PATCH_URL="${HS_FILES}/fixes/virtual_sdcard_bed_temp_fix.patch"
   
   # Fluidd #
   FLUIDD_FOLDER="${USR_DATA}/fluidd"
@@ -128,6 +130,12 @@ function set_paths() {
   BED_MESH_MACRO_URL="${HS_FILES}/macros/bed_mesh.cfg"
   OVERRIDES_MACRO_FILE="${HS_CONFIG_FOLDER}/overrides.cfg"
   OVERRIDES_MACRO_URL="${HS_FILES}/macros/overrides.cfg"
+
+  # Modern Cartographer #
+  CARTOGRAPHER_MODERN_CFG_FILE="${HS_CONFIG_FOLDER}/cartographer-modern.cfg"
+  CARTOGRAPHER_MODERN_CFG_URL="${HS_FILES}/cartographer-modern/cartographer.cfg"
+  CARTOGRAPHER_MODERN_EXTRAS_URL="${HS_FILES}/cartographer-modern/cartographer.py"
+  CARTOGRAPHER_MODERN_MCU_PATCH_URL="${HS_FILES}/cartographer-modern/mcu.triggerdispatch.patch"
   
   # Save Z-Offset Macros #
   SAVE_ZOFFSET_FILE="${HS_CONFIG_FOLDER}/save-zoffset.cfg"

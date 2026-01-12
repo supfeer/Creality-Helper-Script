@@ -1,0 +1,40 @@
+--- /usr/share/klipper/klippy/extras/virtual_sdcard.py
++++ /usr/share/klipper/klippy/extras/virtual_sdcard.py
+@@ -1197,6 +1197,29 @@
+                     if not self.layer_key:
+                         self.layer_key = layer_key
+                     break
++
++    def update_defaults_from_start_print(self, line):
++        stripped = line.lstrip()
++        if not stripped.startswith("START_PRINT"):
++            return
++        match = re.search(r"\bEXTRUDER_TEMP\s*=\s*([0-9]+(?:\.[0-9]+)?)", stripped)
++        if not match:
++            return
++        try:
++            extruder_temp = float(match.group(1))
++        except ValueError:
++            return
++        custom_macro = self.printer.lookup_object('custom_macro', None)
++        if custom_macro:
++            # Keep fallback temperature in sync when box metadata is missing.
++            custom_macro.default_extruder_temp = extruder_temp
++        box = self.printer.lookup_object("box", None)
++        if box and getattr(box, "box_action", None) and getattr(box.box_action, "boxcfg", None):
++            boxcfg = box.box_action.boxcfg
++            if hasattr(boxcfg, "Tn_extrude_temp"):
++                boxcfg.Tn_extrude_temp = extruder_temp
++            elif hasattr(boxcfg, "tn_extrude_temp"):
++                boxcfg.tn_extrude_temp = extruder_temp
+ 
+     def first_floor_pause(self, line, toolhead):
+         if self.print_first_layer and self.count_G1 >= 20:
+@@ -1368,6 +1391,7 @@
+                                                                                                            gcode_move, start_time, end_time, interval_start_time, interval_end_time)
+                 # 判断line 是否为M106或者END_PRINT来做一些操作
+                 line = self.judge_line_starts_with(line, power_loss_switch, bl24c16f)
++                self.update_defaults_from_start_print(line)
+                 # 判断line 记录层信息
+                 self.record_layer_info(line, power_loss_switch)
+                 # 根据情况进行首层暂停打印

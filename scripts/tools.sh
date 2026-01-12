@@ -36,6 +36,17 @@ function printing_gcode_from_folder_message(){
   bottom_line
 }
 
+function fix_start_print_temps_message(){
+  top_line
+  title 'Fix START_PRINT bed/extruder temps' "${yellow}"
+  inner_line
+  hr
+  echo -e " │ ${cyan}This keeps bed mesh calibration and box defaults aligned     ${white}│"
+  echo -e " │ ${cyan}with START_PRINT parameters from the Gcode file.             ${white}│"
+  hr
+  bottom_line
+}
+
 function enable_camera_settings_message(){
   top_line
   title 'Enable camera settings in Moonraker' "${yellow}"
@@ -86,6 +97,16 @@ function reset_factory_settings_message(){
   hr
   echo -e " │ ${cyan}Note: After factory reset all features already been          ${white}│"
   echo -e " │ ${cyan}installed with Creality Helper Script must be reinstalled.   ${white}│"
+  hr
+  bottom_line
+}
+
+function fix_trsync_timeout_message(){
+  top_line
+  title 'Fix TRSYNC_TIMEOUT' "${yellow}"
+  inner_line
+  hr
+  echo -e " │ ${cyan}This updates TRSYNC_TIMEOUT to 0.05 in Klipper MCU code.     ${white}│"
   hr
   bottom_line
 }
@@ -161,6 +182,86 @@ function printing_gcode_from_folder(){
         if [ "$model" = "3V3" ]; then
           ln -sf "$KLIPPER_GCODE_3V3_URL" "$KLIPPER_KLIPPY_FOLDER"/gcode.py
         fi
+        echo -e "Info: Restarting Klipper service..."
+        restart_klipper
+        ok_msg "Fix has been applied successfully!"
+        return;;
+      N|n)
+        error_msg "Installation canceled!"
+        return;;
+      *)
+        error_msg "Please select a correct choice!";;
+    esac
+  done
+}
+
+function fix_start_print_temps(){
+  fix_start_print_temps_message
+  local yn
+  while true; do
+    read -p "${white} Do you want to apply fix for ${green}START_PRINT bed/extruder temps ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    case "${yn}" in
+      Y|y)
+        echo -e "${white}"
+        if [ ! -f "$KLIPPER_EXTRAS_FOLDER"/virtual_sdcard.py ]; then
+          error_msg "virtual_sdcard.py not found!"
+          return
+        fi
+        if [ ! -f "$KLIPPER_VIRTUAL_SDCARD_TEMP_PATCH_URL" ] || [ ! -f "$KLIPPER_VIRTUAL_SDCARD_BED_PATCH_URL" ]; then
+          error_msg "Patch file not found!"
+          return
+        fi
+        local extruder_applied=0
+        local bed_applied=0
+        if grep -q "update_defaults_from_start_print" "$KLIPPER_EXTRAS_FOLDER"/virtual_sdcard.py; then
+          extruder_applied=1
+        fi
+        if grep -q "get_start_print_bed_temp" "$KLIPPER_EXTRAS_FOLDER"/virtual_sdcard.py; then
+          bed_applied=1
+        fi
+        if [ "$extruder_applied" -eq 1 ] && [ "$bed_applied" -eq 1 ]; then
+          ok_msg "Fix is already applied!"
+          return
+        fi
+        if [ "$extruder_applied" -eq 0 ]; then
+          echo -e "Info: Applying extruder temperature fix..."
+          patch -p0 -N < "$KLIPPER_VIRTUAL_SDCARD_TEMP_PATCH_URL"
+        fi
+        if [ "$bed_applied" -eq 0 ]; then
+          echo -e "Info: Applying bed temperature fix..."
+          patch -p0 -N < "$KLIPPER_VIRTUAL_SDCARD_BED_PATCH_URL"
+        fi
+        echo -e "Info: Restarting Klipper service..."
+        restart_klipper
+        ok_msg "Fix has been applied successfully!"
+        return;;
+      N|n)
+        error_msg "Installation canceled!"
+        return;;
+      *)
+        error_msg "Please select a correct choice!";;
+    esac
+  done
+}
+
+function fix_trsync_timeout(){
+  fix_trsync_timeout_message
+  local yn
+  while true; do
+    read -p "${white} Do you want to apply fix for ${green}TRSYNC_TIMEOUT ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    case "${yn}" in
+      Y|y)
+        echo -e "${white}"
+        if [ ! -f "$KLIPPER_KLIPPY_FOLDER"/mcu.py ]; then
+          error_msg "mcu.py not found!"
+          return
+        fi
+        if grep -q "TRSYNC_TIMEOUT = 0.05" "$KLIPPER_KLIPPY_FOLDER"/mcu.py; then
+          ok_msg "Fix is already applied!"
+          return
+        fi
+        echo -e "Info: Applying TRSYNC_TIMEOUT fix..."
+        sed -i 's/TRSYNC_TIMEOUT = 0.025/TRSYNC_TIMEOUT = 0.05/g' "$KLIPPER_KLIPPY_FOLDER"/mcu.py
         echo -e "Info: Restarting Klipper service..."
         restart_klipper
         ok_msg "Fix has been applied successfully!"

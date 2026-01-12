@@ -27,6 +27,10 @@ function tools_menu_ui_k2plus() {
   hr
   menu_option '13' 'Reset' 'factory settings'
   hr
+  menu_option '14' 'Fix' 'START_PRINT bed/extruder temps'
+  hr
+  menu_option '15' 'Fix' 'TRSYNC_TIMEOUT'
+  hr
   inner_line
   hr
   bottom_menu_option 'b' 'Back to [Main Menu]' "${yellow}"
@@ -103,6 +107,10 @@ function tools_menu_k2plus() {
         run "restore_previous_firmware" "tools_menu_ui_k2plus";;
       13)
         run "reset_factory_settings" "tools_menu_ui_k2plus";;
+      14)
+        run "fix_start_print_temps" "tools_menu_ui_k2plus";;
+      15)
+        run "fix_trsync_timeout" "tools_menu_ui_k2plus";;
       B|b)
         clear; main_menu; break;;
       Q|q)

@@ -1,0 +1,52 @@
+--- /usr/share/klipper/klippy/extras/virtual_sdcard.py
++++ /usr/share/klipper/klippy/extras/virtual_sdcard.py
+@@ -1197,6 +1197,23 @@
+                     if not self.layer_key:
+                         self.layer_key = layer_key
+                     break
++
++    def get_start_print_bed_temp(self, filename):
++        filepath = os.path.join(base_dir, "printer_data/gcodes", filename)
++        try:
++            with io.open(filepath, "r", encoding="utf-8", errors="ignore") as f:
++                for _ in range(2000):
++                    line = f.readline()
++                    if not line:
++                        break
++                    if "START_PRINT" not in line or "BED_TEMP" not in line:
++                        continue
++                    match = re.search(r"\bBED_TEMP\s*=\s*([0-9]+(?:\.[0-9]+)?)", line)
++                    if match:
++                        return float(match.group(1))
++        except Exception as err:
++            logging.error("get_start_print_bed_temp: %s" % err)
++        return None
+ 
+     def update_defaults_from_start_print(self, line):
+         stripped = line.lstrip()
+@@ -1307,13 +1324,18 @@
+             self.run_bed_mesh_calibate = False
+             cmd = "BED_MESH_CALIBRATE_START_PRINT GCODE_FILE='%s'" % self.current_file.name
+             try:
+-                # 当前目标温度大于热床调平时的默认温度时,用当前目标温度调平
+-                custom_macro = self.printer.lookup_object('custom_macro')
+-                heater_bed = self.printer.lookup_object('heater_bed').heater
+-                target_temp = heater_bed.target_temp
+-                default_bed_temp = custom_macro.default_bed_temp
+-                if target_temp > default_bed_temp:
+-                    cmd += " BED_TEMP=%s" % target_temp
++                bed_temp = self.get_start_print_bed_temp(self.current_file.name)
++                if bed_temp is not None:
++                    # Prefer bed temp from START_PRINT when available.
++                    cmd += " BED_TEMP=%s" % bed_temp
++                else:
++                    # 当前目标温度大于热床调平时的默认温度时,用当前目标温度调平
++                    custom_macro = self.printer.lookup_object('custom_macro')
++                    heater_bed = self.printer.lookup_object('heater_bed').heater
++                    target_temp = heater_bed.target_temp
++                    default_bed_temp = custom_macro.default_bed_temp
++                    if target_temp > default_bed_temp:
++                        cmd += " BED_TEMP=%s" % target_temp
+             except Exception as err:
+                 logging.exception("run_bed_mesh_calibate error: %s" % err)
+             self.gcode.run_script(cmd)
