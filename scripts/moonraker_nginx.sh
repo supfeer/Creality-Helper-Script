@@ -42,10 +42,8 @@ function install_moonraker_nginx(){
         echo -e "Info: Extracting Nginx files..."
         tar -xvf "$NGINX_URL" -C "$USR_DATA"
         echo -e "Info: Copying services files..."
-        if [ ! -f "$INITD_FOLDER"/S50nginx ]; then
-          cp "$NGINX_SERVICE_URL" "$INITD_FOLDER"/S50nginx
-          chmod +x "$INITD_FOLDER"/S50nginx
-        fi
+        cp "$NGINX_SERVICE_URL" "$INITD_FOLDER"/S50nginx
+        chmod +x "$INITD_FOLDER"/S50nginx
         if [ ! -f "$INITD_FOLDER"/S56moonraker_service ]; then
           cp "$MOONRAKER_SERVICE_URL" "$INITD_FOLDER"/S56moonraker_service
           chmod +x "$INITD_FOLDER"/S56moonraker_service
@@ -61,7 +59,11 @@ function install_moonraker_nginx(){
         cp "$MOONRAKER_URL3" "$PRINTER_DATA_FOLDER"/moonraker.asvc
         echo -e "Info: Applying changes from official repo..."
         cd "$MOONRAKER_FOLDER"/moonraker
-        git stash; git checkout master; git pull
+        git config --global --add safe.directory "$MOONRAKER_FOLDER"/moonraker
+        git fetch origin master
+        git checkout master
+        git reset --hard FETCH_HEAD
+        git clean -fd
         echo -e "Info: Installing Supervisor Lite..."
         chmod 755 "$SUPERVISOR_URL"
         ln -sf "$SUPERVISOR_URL" "$SUPERVISOR_FILE"
@@ -161,7 +163,11 @@ function install_moonraker_3v3(){
         cp "$MOONRAKER_URL3" "$PRINTER_DATA_FOLDER"/moonraker.asvc
         echo -e "Info: Applying changes from official repo..."
         cd "$MOONRAKER_FOLDER"/moonraker
-        git stash; git checkout master; git pull
+        git config --global --add safe.directory "$MOONRAKER_FOLDER"/moonraker
+        git fetch origin master
+        git checkout master
+        git reset --hard FETCH_HEAD
+        git clean -fd
         echo -e "Info: Installing Supervisor Lite..."
         chmod 755 "$SUPERVISOR_URL"
         ln -sf "$SUPERVISOR_URL" "$SUPERVISOR_FILE"

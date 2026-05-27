@@ -14,11 +14,24 @@ function set_paths() {
   red=`echo -en "\033[01;31m"`
 
   # System #
-  CURL="${HELPER_SCRIPT_FOLDER}/files/fixes/curl"
+  if command -v curl >/dev/null 2>&1; then
+    CURL="$(command -v curl)"
+  elif [ -x "${HELPER_SCRIPT_FOLDER}/files/fixes/curl" ]; then
+    CURL="${HELPER_SCRIPT_FOLDER}/files/fixes/curl"
+  else
+    CURL="curl"
+  fi
   INITD_FOLDER="/etc/init.d"
   USR_DATA="/usr/data"
   USR_SHARE="/usr/share"
-  PRINTER_DATA_FOLDER="$USR_DATA/printer_data"
+  if [ -d "/mnt/UDISK/printer_data" ]; then
+    PRINTER_DATA_FOLDER="/mnt/UDISK/printer_data"
+  else
+    PRINTER_DATA_FOLDER="$USR_DATA/printer_data"
+  fi
+  if [ "$PRINTER_DATA_FOLDER" = "/mnt/UDISK/printer_data" ] && [ ! -e "$USR_DATA/printer_data" ]; then
+    ln -sf "$PRINTER_DATA_FOLDER" "$USR_DATA/printer_data"
+  fi
 
   # Helper Script #
   HS_FILES="${HELPER_SCRIPT_FOLDER}/files"
@@ -105,6 +118,16 @@ function set_paths() {
   USEFUL_MACROS_FILE="${HS_CONFIG_FOLDER}/useful-macros.cfg"
   USEFUL_MACROS_URL="${HS_FILES}/macros/useful-macros.cfg"
   USEFUL_MACROS_3V3_URL="${HS_FILES}/macros/useful-macros-3v3.cfg"
+
+  # K2PLUS Macros #
+  M191_MACRO_FILE="${HS_CONFIG_FOLDER}/m191.cfg"
+  M191_MACRO_URL="${HS_FILES}/macros/m191.cfg"
+  START_PRINT_MACRO_FILE="${HS_CONFIG_FOLDER}/start_print.cfg"
+  START_PRINT_MACRO_URL="${HS_FILES}/macros/start_print.cfg"
+  BED_MESH_MACRO_FILE="${HS_CONFIG_FOLDER}/bed_mesh.cfg"
+  BED_MESH_MACRO_URL="${HS_FILES}/macros/bed_mesh.cfg"
+  OVERRIDES_MACRO_FILE="${HS_CONFIG_FOLDER}/overrides.cfg"
+  OVERRIDES_MACRO_URL="${HS_FILES}/macros/overrides.cfg"
   
   # Save Z-Offset Macros #
   SAVE_ZOFFSET_FILE="${HS_CONFIG_FOLDER}/save-zoffset.cfg"
@@ -115,6 +138,7 @@ function set_paths() {
   SCREWS_ADJUST_URL="${HS_FILES}/screws-tilt-adjust/screws_tilt_adjust.py"
   SCREWS_ADJUST_K1_URL="${HS_FILES}/screws-tilt-adjust/screws-tilt-adjust-k1.cfg"
   SCREWS_ADJUST_K1M_URL="${HS_FILES}/screws-tilt-adjust/screws-tilt-adjust-k1max.cfg"
+  SCREWS_ADJUST_K2PLUS_URL="${HS_FILES}/screws-tilt-adjust/screws-tilt-adjust-k2plus.cfg"
   SCREWS_ADJUST_3KE_URL="${HS_FILES}/screws-tilt-adjust/screws-tilt-adjust-3ke.cfg"
   SCREWS_ADJUST_E5M_URL="${HS_FILES}/screws-tilt-adjust/screws-tilt-adjust-e5m.cfg"
   
@@ -191,6 +215,8 @@ function set_paths() {
 
 function set_permissions() {
 
-  chmod +x "$CURL" >/dev/null 2>&1 &
+  if [ "$CURL" = "${HELPER_SCRIPT_FOLDER}/files/fixes/curl" ]; then
+    chmod +x "$CURL" >/dev/null 2>&1 &
+  fi
 
 }

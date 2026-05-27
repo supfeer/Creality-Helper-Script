@@ -1,7 +1,15 @@
 #!/bin/sh
 
 GUPPY_DIR="/usr/data/guppyscreen"
-CURL="/usr/data/helper-script/files/fixes/curl"
+if command -v curl >/dev/null 2>&1; then
+    CURL_BIN="$(command -v curl)"
+elif [ -x /usr/data/helper-script/files/fixes/curl ]; then
+    CURL_BIN="/usr/data/helper-script/files/fixes/curl"
+    chmod 755 "$CURL_BIN"
+else
+    echo "Error: curl not found. Install curl or run bootstrap again."
+    exit 1
+fi
 VERSION_FILE="$GUPPY_DIR/.version"
 CUSTOM_UPGRADE_SCRIPT="$GUPPY_DIR/custom_upgrade.sh"
 
@@ -11,7 +19,7 @@ if [ -f "$VERSION_FILE" ]; then
     ASSET_NAME=$(jq '.asset_name' "$VERSION_FILE")
 fi
 
-"$CURL" -s https://api.github.com/repos/ballaswag/guppyscreen/releases -o /tmp/guppy-releases.json
+"$CURL_BIN" -s https://api.github.com/repos/ballaswag/guppyscreen/releases -o /tmp/guppy-releases.json
 latest_version=$(jq -r '.[0].tag_name' /tmp/guppy-releases.json)
 if [ "$(printf '%s\n' "$CURRENT_VERSION" "$latest_version" | sort -V | head -n1)" = "$latest_version" ]; then 
     echo "Guppy Screen $CURRENT_VERSION is already up to date!"
@@ -20,7 +28,7 @@ if [ "$(printf '%s\n' "$CURRENT_VERSION" "$latest_version" | sort -V | head -n1)
 else
     asset_url=$(jq -r ".[0].assets[] | select(.name == $ASSET_NAME).browser_download_url" /tmp/guppy-releases.json)
     echo "Downloading latest version $latest_version from $asset_url"
-    "$CURL" -L "$asset_url" -o /usr/data/guppyscreen.tar.gz
+    "$CURL_BIN" -L "$asset_url" -o /usr/data/guppyscreen.tar.gz
 fi
 
 tar -xvf /usr/data/guppyscreen.tar.gz -C "$GUPPY_DIR/.."
