@@ -180,19 +180,31 @@ function restart_nginx() {
 
 function start_klipper() {
   set +e
-  /etc/init.d/S55klipper_service start
+  if [ -x /etc/init.d/S55klipper_service ]; then
+    /etc/init.d/S55klipper_service start
+  else
+    /etc/init.d/klipper start
+  fi
   set -e
 }
 
 function stop_klipper() {
   set +e
-  /etc/init.d/S55klipper_service stop
+  if [ -x /etc/init.d/S55klipper_service ]; then
+    /etc/init.d/S55klipper_service stop
+  else
+    /etc/init.d/klipper stop
+  fi
   set -e
 }
 
 function restart_klipper() {
   set +e
-  /etc/init.d/S55klipper_service restart
+  if [ -x /etc/init.d/S55klipper_service ]; then
+    /etc/init.d/S55klipper_service restart
+  else
+    /etc/init.d/klipper restart
+  fi
   set -e
 }
 
