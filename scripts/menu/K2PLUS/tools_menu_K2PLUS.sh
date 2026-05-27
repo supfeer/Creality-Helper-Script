@@ -27,6 +27,8 @@ function tools_menu_ui_k2plus() {
   hr
   menu_option '13' 'Reset' 'factory settings'
   hr
+  menu_option '14' 'Fix' 'Stepper too far in past on G28'
+  hr
   inner_line
   hr
   bottom_menu_option 'b' 'Back to [Main Menu]' "${yellow}"
@@ -103,6 +105,8 @@ function tools_menu_k2plus() {
         run "restore_previous_firmware" "tools_menu_ui_k2plus";;
       13)
         run "reset_factory_settings" "tools_menu_ui_k2plus";;
+      14)
+        run "fix_k2plus_homing_cfs_heartbeat" "tools_menu_ui_k2plus";;
       B|b)
         clear; main_menu; break;;
       Q|q)
