@@ -8,89 +8,67 @@ if [ ! -f /etc/init.d/S58factoryreset ]; then
 fi
 
 get_model=$( /usr/bin/get_sn_mac.sh model 2>&1 )
-if echo "$get_model" | grep -iq "K1"; then 
+if echo "$get_model" | grep -iq "K1"; then
   model="K1"
 elif echo "$get_model" | grep -iq "K2"; then
   model="K2PLUS"
 elif echo "$get_model" | grep -iq "F008"; then
   model="K2PLUS"
-elif echo "$get_model" | grep -iq "F001"; then 
+elif echo "$get_model" | grep -iq "F001"; then
   model="3V3"
-elif echo "$get_model" | grep -iq "F002"; then 
+elif echo "$get_model" | grep -iq "F002"; then
   model="3V3"
-elif echo "$get_model" | grep -iq "F005"; then 
+elif echo "$get_model" | grep -iq "F005"; then
   model="3KE"
-elif echo "$get_model" | grep -iq "F003"; then 
+elif echo "$get_model" | grep -iq "F003"; then
   model="10SE"
 elif echo "$get_model" | grep -iq "F004"; then
   model="E5M"
 fi
 
-function get_script_version() {
-  local version
-  cd "${HELPER_SCRIPT_FOLDER}"
-  version="$(git describe HEAD --always --tags | sed 's/-.*//')"
-  echo "${cyan}${version}${white}"
+script_title() {
+  case "$model" in
+    K1) echo "$(t 'model.K1.title')" ;;
+    K2PLUS) echo "$(t 'model.K2PLUS.title')" ;;
+    3V3) echo "$(t 'model.3V3.title')" ;;
+    3KE) echo "$(t 'model.3KE.title')" ;;
+    10SE) echo "$(t 'model.10SE.title')" ;;
+    E5M) echo "$(t 'model.E5M.title')" ;;
+    *) echo "PRINTERS" ;;
+  esac
 }
 
-function version_line() {
-  local content="$1"
-  local content_length="${#content}"
-  local width=$((75))
-  local padding_length=$((width - content_length - 3))
-  printf " │ %*s%s%s\n" $padding_length '' "$content" " │"
-}
-
-function script_title() {
-  local title
-  if [ "$model" = "K1" ]; then
-    title="K1 SERIES"
-  elif [ "$model" = "K2PLUS" ]; then
-    title="K2PLUS"
-  elif [ "$model" = "3V3" ]; then
-    title="ENDER-3 V3 SERIES"
-  elif [ "$model" = "3KE" ]; then
-    title="ENDER-3 V3 KE"
-  elif [ "$model" = "10SE" ]; then
-    title="CR-10 SE"
-  elif [ "$model" = "E5M" ]; then
-    title="Ender-5 MAX"
-  else
-    title="PRINTERS"
-  fi
-  echo "${title}"
-}
-
-function main_menu_ui() {
+main_menu_ui() {
   top_line
-  title "• HELPER SCRIPT FOR CREALITY $(script_title) •" "${blue}"
-  title "Copyright © Cyril Guislain (Guilouz)" "${white}"
+  title "$(format "$(t 'main.title')" "$(script_title)")" "${blue}"
+  title "$(t 'main.copyright')" "${white}"
   inner_line
-  title "/!\\ ONLY USE THIS SCRIPT WITH LATEST FIRMWARE VERSION /!\\" "${darkred}"
-  inner_line
-  hr
-  main_menu_option '1' '[Install]' 'Menu'
-  main_menu_option '2' '[Remove]' 'Menu'
-  main_menu_option '3' '[Customize]' 'Menu'
-  main_menu_option '4' '[Backup & Restore]' 'Menu'
-  main_menu_option '5' '[Tools]' 'Menu'
-  main_menu_option '6' '[Information]' 'Menu'
-  main_menu_option '7' '[System]' 'Menu'
-  hr
+  title "$(t 'main.warning')" "${darkred}"
   inner_line
   hr
-  bottom_menu_option 'q' 'Exit' "${darkred}"
+  main_menu_option '1' "$(t 'main.option.install')" "$(t 'main.option.menu')"
+  main_menu_option '2' "$(t 'main.option.remove')" "$(t 'main.option.menu')"
+  main_menu_option '3' "$(t 'main.option.customize')" "$(t 'main.option.menu')"
+  main_menu_option '4' "$(t 'main.option.backup')" "$(t 'main.option.menu')"
+  main_menu_option '5' "$(t 'main.option.tools')" "$(t 'main.option.menu')"
+  main_menu_option '6' "$(t 'main.option.info')" "$(t 'main.option.menu')"
+  main_menu_option '7' "$(t 'main.option.system')" "$(t 'main.option.menu')"
+  main_menu_option '8' "$(t 'main.option.language')" "$(t 'main.option.menu')"
+  hr
+  inner_line
+  hr
+  bottom_menu_option 'q' "$(t 'menu.exit')" "${darkred}"
   hr
   version_line "$(get_script_version)"
   bottom_line
 }
 
-function main_menu() {
+main_menu() {
   clear
   main_menu_ui
   local main_menu_opt
   while true; do
-    read -p "${white} Type your choice and validate with Enter: ${yellow}" main_menu_opt
+    read -p "${white} $(t 'prompt.choice') ${yellow}" main_menu_opt
     case "${main_menu_opt}" in
       1) clear
          if [ "$model" = "K1" ]; then
@@ -154,7 +132,7 @@ function main_menu() {
          else
            tools_menu_10se
          fi
-         main_ui;;
+         break;;
       6) clear
          if [ "$model" = "K1" ]; then
            info_menu_k1
@@ -173,10 +151,13 @@ function main_menu() {
       7) clear
          system_menu
          break;;
+      8) clear
+         language_menu
+         break;;
       Q|q)
          clear; exit 0;;
       *)
-         error_msg "Please select a correct choice!";;
+         error_msg "$(t 'menu.invalid_choice')";;
     esac
   done
   main_menu

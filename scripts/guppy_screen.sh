@@ -26,8 +26,15 @@ function install_guppy_screen(){
         fi
         if [ "$model" = "K1" ] || [ "$model" = "3V3" ]; then
           local theme_choice
+          if [ "${HELPER_NONINTERACTIVE:-0}" = "1" ]; then
+            theme_choice="release"
+          fi
           while true; do
-            read -p " Do you want to install ${green}Nightly Build ${white}or ${green}Release Build ${white}? (${yellow}nightly${white}/${yellow}release${white}): ${yellow}" theme_choice
+            if [ -z "${theme_choice}" ]; then
+              if ! read -p " Do you want to install ${green}Nightly Build ${white}or ${green}Release Build ${white}? (${yellow}nightly${white}/${yellow}release${white}): ${yellow}" theme_choice; then
+                theme_choice="release"
+              fi
+            fi
             case "${theme_choice}" in
               NIGHTLY|nightly)
                 echo -e "${white}"
@@ -40,13 +47,21 @@ function install_guppy_screen(){
                 "$CURL" -L https://github.com/ballaswag/guppyscreen/releases/latest/download/guppyscreen.tar.gz -o "$USR_DATA"/guppyscreen.tar.gz
                 break;;
               *)
+                theme_choice=""
                 error_msg "Please select a correct choice!";;
             esac
           done
         else
           local theme_choice
+          if [ "${HELPER_NONINTERACTIVE:-0}" = "1" ]; then
+            theme_choice="release"
+          fi
           while true; do
-            read -p " Do you want to install ${green}Nightly Build ${white}or ${green}Release Build ${white}? (${yellow}nightly${white}/${yellow}release${white}): ${yellow}" theme_choice
+            if [ -z "${theme_choice}" ]; then
+              if ! read -p " Do you want to install ${green}Nightly Build ${white}or ${green}Release Build ${white}? (${yellow}nightly${white}/${yellow}release${white}): ${yellow}" theme_choice; then
+                theme_choice="release"
+              fi
+            fi
             case "${theme_choice}" in
               NIGHTLY|nightly)
                 echo -e "${white}"
@@ -59,6 +74,7 @@ function install_guppy_screen(){
                 "$CURL" -L https://github.com/ballaswag/guppyscreen/releases/latest/download/guppyscreen-smallscreen.tar.gz -o "$USR_DATA"/guppyscreen.tar.gz
                 break;;
               *)
+                theme_choice=""
                 error_msg "Please select a correct choice!";;
             esac
           done
@@ -79,18 +95,25 @@ function install_guppy_screen(){
             cp "$INITD_FOLDER"/S99start_app "$HS_BACKUP_FOLDER"/guppyscreen
           fi
         fi
-        if [ ! -f "$HS_BACKUP_FOLDER"/guppyscreen/ft2font.cpython-38-mipsel-linux-gnu.so ]; then
+        if [ -f /usr/lib/python3.8/site-packages/matplotlib/ft2font.cpython-38-mipsel-linux-gnu.so ] && [ ! -f "$HS_BACKUP_FOLDER"/guppyscreen/ft2font.cpython-38-mipsel-linux-gnu.so ]; then
           mv /usr/lib/python3.8/site-packages/matplotlib/ft2font.cpython-38-mipsel-linux-gnu.so "$HS_BACKUP_FOLDER"/guppyscreen
         fi
-        local yn
+        local yn_services=""
+        if [ "${HELPER_NONINTERACTIVE:-0}" = "1" ]; then
+          yn_services="n"
+        fi
           while true; do
-            echo
-            echo -e " ${white}Do you want to disable all Creality services ?"
-            echo -e " ${yellow}Benefits: ${white}\e[97mFrees up system resources on your K1 for critical services such as Klipper (recommended)${white}"
-            echo -e " ${yellow}Disadvantages: ${white}\e[97mDisabling all Creality services breaks Creality Cloud and Creality Print${white}"
-            echo
-            read -p " Do you want to disable all Creality Services? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
-            case "${yn}" in
+            if [ -z "${yn_services}" ]; then
+              echo
+              echo -e " ${white}Do you want to disable all Creality services ?"
+              echo -e " ${yellow}Benefits: ${white}\e[97mFrees up system resources on your K1 for critical services such as Klipper (recommended)${white}"
+              echo -e " ${yellow}Disadvantages: ${white}\e[97mDisabling all Creality services breaks Creality Cloud and Creality Print${white}"
+              echo
+              if ! read -p " Do you want to disable all Creality Services? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn_services; then
+                yn_services="n"
+              fi
+            fi
+            case "${yn_services}" in
               Y|y)
                 echo -e "${white}"
                 echo -e "Info: Disabling Creality services..."
@@ -109,6 +132,7 @@ function install_guppy_screen(){
               N|n)
                 break;;
               *)
+                yn_services=""
                 error_msg "Please select a correct choice!";;
             esac
           done
@@ -180,9 +204,9 @@ function install_guppy_screen(){
         killall -q display-server
         set -e
         echo -e "Info: Starting Guppy Screen service..."
-        /etc/init.d/S99guppyscreen restart &> /dev/null
+        /etc/init.d/S99guppyscreen restart >/dev/null 2>&1 || true
         sleep 1
-        ps auxw | grep guppyscreen | grep -v sh | grep -v grep
+        ps auxw | grep guppyscreen | grep -v sh | grep -v grep || true
         ok_msg "Guppy Screen has been installed successfully!"
         return;;
       N|n)
@@ -215,11 +239,13 @@ function remove_guppy_screen(){
           fi
           rm -rf "$HS_BACKUP_FOLDER"/guppyscreen
         fi
-        if [ ! -n "$(ls -A "$HS_BACKUP_FOLDER")" ]; then
+        if [ -d "$HS_BACKUP_FOLDER" ] && [ -z "$(ls -A "$HS_BACKUP_FOLDER" 2>/dev/null)" ]; then
           rm -rf "$HS_BACKUP_FOLDER"
         fi
         echo -e "Info: Stopping Guppy Screen Service..."
-        [ -f "$INITD_FOLDER"/S99guppyscreen ] && "$INITD_FOLDER"/S99guppyscreen stop &> /dev/null
+        if [ -f "$INITD_FOLDER"/S99guppyscreen ]; then
+          "$INITD_FOLDER"/S99guppyscreen stop >/dev/null 2>&1 || true
+        fi
         set +e
         killall -q guppyscreen
         set -e

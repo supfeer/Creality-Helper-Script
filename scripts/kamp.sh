@@ -47,7 +47,7 @@ function install_kamp(){
         fi
         cp "$KAMP_URL"/KAMP_Settings.cfg "$KAMP_FOLDER"/KAMP_Settings.cfg
         ln -sf "$VIRTUAL_PINS_URL" "$VIRTUAL_PINS_FILE"
-        if grep -q "[virtual_pins]" "$PRINTER_CFG" ; then
+        if ! grep -q "\[virtual_pins\]" "$PRINTER_CFG" ; then
           echo -e "Info: Adding [virtual_pins] configuration in printer.cfg file..."
           sed -i '/\[include sensorless.cfg\]/i [virtual_pins]' "$PRINTER_CFG"
         else
@@ -68,8 +68,15 @@ function install_kamp(){
         fi
         echo
         local yn_prusa
+        if [ "${HELPER_NONINTERACTIVE:-0}" = "1" ]; then
+          yn_prusa="n"
+        fi
         while true; do
-          read -p " Do you want to enable needed macros for PrusaSlicer? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn_prusa
+          if [ -z "${yn_prusa}" ]; then
+            if ! read -p " Do you want to enable needed macros for PrusaSlicer? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn_prusa; then
+              yn_prusa="n"
+            fi
+          fi
           case "${yn_prusa}" in
             Y|y)
               echo -e "${white}"
@@ -84,6 +91,7 @@ function install_kamp(){
               echo -e "${white}"
               break;;
             *)
+              yn_prusa=""
               error_msg "Please select a correct choice!";;
           esac
         done
@@ -113,7 +121,7 @@ function remove_kamp(){
         rm -rf "$HS_CONFIG_FOLDER"/KAMP
         rm -f "$KLIPPER_EXTRAS_FOLDER"/virtual_pins.py 
         rm -f "$KLIPPER_EXTRAS_FOLDER"/virtual_pins.pyc
-        if grep -q "[virtual_pins]" "$PRINTER_CFG" ; then
+        if grep -q "\[virtual_pins\]" "$PRINTER_CFG" ; then
           echo -e "Info: Removing [virtual_pins] configuration in printer.cfg file..."
           sed -i '/\[virtual_pins\]/d' "$PRINTER_CFG"
         else
@@ -131,7 +139,7 @@ function remove_kamp(){
         else
           echo -e "Info: [gcode_macro START_PRINT] is already enabled in gcode_macro.cfg file..."
         fi
-        if [ ! -n "$(ls -A "$HS_CONFIG_FOLDER")" ]; then
+        if [ -d "$HS_CONFIG_FOLDER" ] && [ -z "$(ls -A "$HS_CONFIG_FOLDER" 2>/dev/null)" ]; then
           rm -rf "$HS_CONFIG_FOLDER"
         fi
         echo -e "Info: Restarting Klipper service..."

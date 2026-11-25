@@ -47,19 +47,28 @@ function remove_entware(){
       Y|y)
         echo -e "${white}"
         echo -e "Info: Removing startup script..."
-        rm -f /etc/init.d/S50unslung
+        rm -f /etc/init.d/S50unslung /etc/init.d/unslung /etc/rc.d/S99unslung /etc/rc.d/K01unslung
         echo -e "Info: Removing directories..."
-        rm -rf /usr/data/opt
         if [ -L /opt ]; then
-          rm /opt
+          local opt_target
+          opt_target="$(readlink /opt 2>/dev/null || true)"
+          rm -f /opt
+          if [ "$opt_target" = "/mnt/UDISK/opt" ]; then
+            rm -rf /mnt/UDISK/opt
+          fi
           mkdir -p /opt
           chmod 755 /opt
         fi
+        rm -rf /usr/data/opt
         echo -e "Info: Removing SFTP server symlink..."
-        [ -L /usr/libexec/sftp-server ] && rm /usr/libexec/sftp-server
+        if [ -L /usr/libexec/sftp-server ]; then
+          rm -f /usr/libexec/sftp-server
+        fi
         echo -e "Info: Removing changes in system profile..."
         rm -f /etc/profile.d/entware.sh
-        sed -i 's/\/opt\/bin:\/opt\/sbin:\/bin:/\/bin:/' /etc/profile
+        if [ -f /etc/profile ]; then
+          sed -i 's/\/opt\/bin:\/opt\/sbin:\/bin:/\/bin:/' /etc/profile
+        fi
         ok_msg "Entware has been removed successfully!"
         return;;
       N|n)

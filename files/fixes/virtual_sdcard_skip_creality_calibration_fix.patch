@@ -1,0 +1,89 @@
+--- /usr/share/klipper/klippy/extras/virtual_sdcard.py
++++ /usr/share/klipper/klippy/extras/virtual_sdcard.py
+@@ -1199,7 +1199,7 @@
+                     break
+ 
+     def get_start_print_bed_temp(self, filename):
+-        filepath = os.path.join(base_dir, "printer_data/gcodes", filename)
++        filepath = filename if os.path.exists(filename) else os.path.join(base_dir, "printer_data/gcodes", filename)
+         try:
+             with io.open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                 for _ in range(2000):
+@@ -1215,6 +1215,33 @@
+             logging.error("get_start_print_bed_temp: %s" % err)
+         return None
+ 
++    def get_skip_creality_calibration(self, filename):
++        filepath = filename if os.path.exists(filename) else os.path.join(base_dir, "printer_data/gcodes", filename)
++        skip = None
++        try:
++            with io.open(filepath, "r", encoding="utf-8", errors="ignore") as f:
++                for _ in range(5000):
++                    line = f.readline()
++                    if not line:
++                        break
++                    if "SKIP_CREALITY_CALIBRATION" not in line:
++                        continue
++                    match = re.search(r"\bSKIP_CREALITY_CALIBRATION\s*(?:=\s*([A-Za-z0-9_]+))?", line)
++                    if not match:
++                        continue
++                    value = match.group(1)
++                    if value is None:
++                        skip = True
++                        continue
++                    value = value.strip().strip('"').strip("'").lower()
++                    if value in ("0", "false", "no", "off"):
++                        skip = False
++                    else:
++                        skip = True
++        except Exception as err:
++            logging.error("get_skip_creality_calibration: %s" % err)
++        return bool(skip)
++
+     def update_defaults_from_start_print(self, line):
+         stripped = line.lstrip()
+         if not stripped.startswith("START_PRINT"):
+@@ -1322,23 +1349,26 @@
+         # 判断是否运行热床调平
+         if self.run_bed_mesh_calibate:
+             self.run_bed_mesh_calibate = False
+-            cmd = "BED_MESH_CALIBRATE_START_PRINT GCODE_FILE='%s'" % self.current_file.name
+-            try:
+-                bed_temp = self.get_start_print_bed_temp(self.current_file.name)
+-                if bed_temp is not None:
+-                    # Prefer bed temp from START_PRINT when available.
+-                    cmd += " BED_TEMP=%s" % bed_temp
+-                else:
+-                    # 当前目标温度大于热床调平时的默认温度时,用当前目标温度调平
+-                    custom_macro = self.printer.lookup_object('custom_macro')
+-                    heater_bed = self.printer.lookup_object('heater_bed').heater
+-                    target_temp = heater_bed.target_temp
+-                    default_bed_temp = custom_macro.default_bed_temp
+-                    if target_temp > default_bed_temp:
+-                        cmd += " BED_TEMP=%s" % target_temp
+-            except Exception as err:
+-                logging.exception("run_bed_mesh_calibate error: %s" % err)
+-            self.gcode.run_script(cmd)
++            if self.get_skip_creality_calibration(self.current_file.name):
++                logging.info("SKIP_CREALITY_CALIBRATION detected, skipping Creality calibration injection")
++            else:
++                cmd = "BED_MESH_CALIBRATE_START_PRINT GCODE_FILE='%s'" % self.current_file.name
++                try:
++                    bed_temp = self.get_start_print_bed_temp(self.current_file.name)
++                    if bed_temp is not None:
++                        # Prefer bed temp from START_PRINT when available.
++                        cmd += " BED_TEMP=%s" % bed_temp
++                    else:
++                        # 当前目标温度大于热床调平时的默认温度时,用当前目标温度调平
++                        custom_macro = self.printer.lookup_object('custom_macro')
++                        heater_bed = self.printer.lookup_object('heater_bed').heater
++                        target_temp = heater_bed.target_temp
++                        default_bed_temp = custom_macro.default_bed_temp
++                        if target_temp > default_bed_temp:
++                            cmd += " BED_TEMP=%s" % target_temp
++                except Exception as err:
++                    logging.exception("run_bed_mesh_calibate error: %s" % err)
++                self.gcode.run_script(cmd)
+         # self.gcode.run_script("G90")
+         toolhead = self.printer.lookup_object('toolhead')
+         pause_resume = self.printer.lookup_object('pause_resume')

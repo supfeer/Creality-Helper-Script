@@ -125,7 +125,7 @@ function remove_useful_macros(){
           echo -e "Info: Removing Overrides configurations in printer.cfg file..."
           sed -i '/include Helper-Script\/overrides\.cfg/d' "$PRINTER_CFG"
         fi
-        if [ ! -n "$(ls -A "$HS_CONFIG_FOLDER")" ]; then
+        if [ -d "$HS_CONFIG_FOLDER" ] && [ -z "$(ls -A "$HS_CONFIG_FOLDER" 2>/dev/null)" ]; then
           rm -rf "$HS_CONFIG_FOLDER"
         fi
         echo -e "Info: Restarting Klipper service..."

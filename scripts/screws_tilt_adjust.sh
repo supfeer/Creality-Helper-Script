@@ -33,13 +33,25 @@ function install_screws_tilt_adjust(){
         fi
         if [ -f "$KLIPPER_EXTRAS_FOLDER"/screws_tilt_adjust.py ]; then
           mv "$KLIPPER_EXTRAS_FOLDER"/screws_tilt_adjust.py "$HS_BACKUP_FOLDER"/screws-tilt-adjust
-          mv "$KLIPPER_EXTRAS_FOLDER"/screws_tilt_adjust.pyc "$HS_BACKUP_FOLDER"/screws-tilt-adjust
+          if [ -f "$KLIPPER_EXTRAS_FOLDER"/screws_tilt_adjust.pyc ]; then
+            mv "$KLIPPER_EXTRAS_FOLDER"/screws_tilt_adjust.pyc "$HS_BACKUP_FOLDER"/screws-tilt-adjust
+          fi
         fi
         echo
         if [ "$model" = "K1" ]; then
           local printer_choice
+          if [ "${HELPER_NONINTERACTIVE:-0}" = "1" ]; then
+            case "$(/usr/bin/get_sn_mac.sh model 2>/dev/null || true)" in
+              *Max*|*MAX*|*max*) printer_choice="k1max" ;;
+              *) printer_choice="k1" ;;
+            esac
+          fi
           while true; do
-            read -p " ${white}Do you want install it for ${yellow}K1${white} or ${yellow}K1 Max${white}? (${yellow}k1${white}/${yellow}k1max${white}): ${yellow}" printer_choice
+            if [ -z "${printer_choice}" ]; then
+              if ! read -p " ${white}Do you want install it for ${yellow}K1${white} or ${yellow}K1 Max${white}? (${yellow}k1${white}/${yellow}k1max${white}): ${yellow}" printer_choice; then
+                printer_choice="k1"
+              fi
+            fi
             case "${printer_choice}" in
               K1|k1)
                 echo -e "${white}"
@@ -52,6 +64,7 @@ function install_screws_tilt_adjust(){
                 ln -sf "$SCREWS_ADJUST_K1M_URL" "$HS_CONFIG_FOLDER"/screws-tilt-adjust.cfg
                 break;;
               *)
+                printer_choice=""
                 error_msg "Please select a correct choice!";;
             esac
           done
@@ -96,10 +109,12 @@ function remove_screws_tilt_adjust(){
         echo -e "Info: Restoring files..."
         if [ -f "$HS_BACKUP_FOLDER"/screws-tilt-adjust/screws_tilt_adjust.py ]; then
           mv "$HS_BACKUP_FOLDER"/screws-tilt-adjust/screws_tilt_adjust.py "$KLIPPER_EXTRAS_FOLDER"
-          mv "$HS_BACKUP_FOLDER"/screws-tilt-adjust/screws_tilt_adjust.pyc "$KLIPPER_EXTRAS_FOLDER"
+          if [ -f "$HS_BACKUP_FOLDER"/screws-tilt-adjust/screws_tilt_adjust.pyc ]; then
+            mv "$HS_BACKUP_FOLDER"/screws-tilt-adjust/screws_tilt_adjust.pyc "$KLIPPER_EXTRAS_FOLDER"
+          fi
           rm -rf "$HS_BACKUP_FOLDER"/screws-tilt-adjust
         fi
-        if [ ! -n "$(ls -A "$HS_BACKUP_FOLDER")" ]; then
+        if [ -d "$HS_BACKUP_FOLDER" ] && [ -z "$(ls -A "$HS_BACKUP_FOLDER" 2>/dev/null)" ]; then
           rm -rf "$HS_BACKUP_FOLDER"
         fi
         echo -e "Info: Removing file..."
@@ -110,7 +125,7 @@ function remove_screws_tilt_adjust(){
         else
           echo -e "Info: Screws Tilt Adjust Support configurations are already removed in printer.cfg file..."
         fi
-        if [ ! -n "$(ls -A "$HS_CONFIG_FOLDER")" ]; then
+        if [ -d "$HS_CONFIG_FOLDER" ] && [ -z "$(ls -A "$HS_CONFIG_FOLDER" 2>/dev/null)" ]; then
           rm -rf "$HS_CONFIG_FOLDER"
         fi
         echo -e "Info: Restarting Klipper service..."

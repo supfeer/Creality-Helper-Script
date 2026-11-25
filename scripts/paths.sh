@@ -75,6 +75,7 @@ function set_paths() {
   KLIPPER_GCODE_3V3_URL="${HS_FILES}/fixes/gcode_3v3.py"
   KLIPPER_VIRTUAL_SDCARD_TEMP_PATCH_URL="${HS_FILES}/fixes/virtual_sdcard_temp_fix.patch"
   KLIPPER_VIRTUAL_SDCARD_BED_PATCH_URL="${HS_FILES}/fixes/virtual_sdcard_bed_temp_fix.patch"
+  KLIPPER_VIRTUAL_SDCARD_SKIP_CREALITY_CALIBRATION_PATCH_URL="${HS_FILES}/fixes/virtual_sdcard_skip_creality_calibration_fix.patch"
   
   # Fluidd #
   FLUIDD_FOLDER="${USR_DATA}/fluidd"

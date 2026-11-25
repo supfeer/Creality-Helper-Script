@@ -33,8 +33,15 @@ function install_usb_camera(){
           echo -e " Make sure your camera is compatible with the chosen resolution."
           echo
           local resolution
+          if [ "${HELPER_NONINTERACTIVE:-0}" = "1" ]; then
+            resolution="720p"
+          fi
           while true; do
-            read -p " What camera resolution do you want to apply? (${yellow}480p${white}/${yellow}720p${white}/${yellow}1080p${white}): ${yellow}" resolution
+            if [ -z "${resolution}" ]; then
+              if ! read -p " What camera resolution do you want to apply? (${yellow}480p${white}/${yellow}720p${white}/${yellow}1080p${white}): ${yellow}" resolution; then
+                resolution="720p"
+              fi
+            fi
             case "${resolution}" in
               480p|480P)
                 echo -e "${white}"
@@ -45,12 +52,13 @@ function install_usb_camera(){
                 echo -e "${white}"
                 echo -e "Info: Applying change..."
               break;;
-              1080p|1080p)
+              1080p|1080P)
                 echo -e "${white}"
                 echo -e "Info: Applying change..."
                 sed -i 's/1280x720/1920x1080/g' "$INITD_FOLDER"/S50usb_camera
               break;;
               *)
+                resolution=""
                 error_msg "Please select a correct choice!";;
             esac
           done
@@ -80,7 +88,9 @@ function remove_usb_camera(){
       Y|y)
         echo -e "${white}"
         echo -e "Info: Stopping service..."
-        "$INITD_FOLDER"/S50usb_camera stop
+        if [ -x "$INITD_FOLDER"/S50usb_camera ]; then
+          "$INITD_FOLDER"/S50usb_camera stop || true
+        fi
         echo -e "Info: Removing file..."
         rm -f "$INITD_FOLDER"/S50usb_camera
         echo -e "Info: Removing packages..."

@@ -79,14 +79,21 @@ function remove_creality_web_interface(){
           echo -e " ${white}You can now connect to Mainsail Web Interface with ${yellow}http://$(check_ipaddress)${white}"
         elif [ -d "$FLUIDD_FOLDER" ] && [ -d "$MAINSAIL_FOLDER" ]; then
           local interface_choice
+          if [ "${HELPER_NONINTERACTIVE:-0}" = "1" ]; then
+            interface_choice="fluidd"
+          fi
           while true; do
-            read -p " ${white}Which Web Interface do you want to set as default (on port 80)? (${yellow}fluidd${white}/${yellow}mainsail${white}): ${yellow}" interface_choice
+            if [ -z "${interface_choice}" ]; then
+              if ! read -p " ${white}Which Web Interface do you want to set as default (on port 80)? (${yellow}fluidd${white}/${yellow}mainsail${white}): ${yellow}" interface_choice; then
+                interface_choice="fluidd"
+              fi
+            fi
             case "${interface_choice}" in
               FLUIDD|fluidd)
                 echo -e "${white}"
                 echo -e "Info: Applying changes..."
-                if [ "$model" = "3V3" ]; then
-                  sed -i '/listen 4408 default_server;/a \        listen 80;' /etc/nginx/nginx.conf
+                if [ "$model" = "3V3" ] || [ ! -f /usr/data/nginx/nginx/nginx.conf ]; then
+                  [ -f /etc/nginx/nginx.conf ] && sed -i '/listen 4408 default_server;/a \        listen 80;' /etc/nginx/nginx.conf
                 else
                   sed -i '/listen 4408 default_server;/a \        listen 80;' /usr/data/nginx/nginx/nginx.conf
                 fi
@@ -110,8 +117,8 @@ function remove_creality_web_interface(){
               MAINSAIL|mainsail)
                 echo -e "${white}"
                 echo -e "Info: Applying changes..."
-                if [ "$model" = "3V3" ]; then
-                  sed -i '/listen 4409 default_server;/a \        listen 80;' /etc/nginx/nginx.conf
+                if [ "$model" = "3V3" ] || [ ! -f /usr/data/nginx/nginx/nginx.conf ]; then
+                  [ -f /etc/nginx/nginx.conf ] && sed -i '/listen 4409 default_server;/a \        listen 80;' /etc/nginx/nginx.conf
                 else
                   sed -i '/listen 4409 default_server;/a \        listen 80;' /usr/data/nginx/nginx/nginx.conf
                 fi
@@ -133,6 +140,7 @@ function remove_creality_web_interface(){
                 echo -e "   You can now connect to Mainsail Web Interface with ${yellow}http://$(check_ipaddress) ${white}or ${yellow}http://$(check_ipaddress):4409${white}"
                 break;;
               *)
+                interface_choice=""
                 error_msg "Please select a correct choice!";;
             esac
           done
