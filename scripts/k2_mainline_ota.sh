@@ -183,7 +183,7 @@ dl_url = check_url(str(manifest["download_url"]))
 upgrade_dir = Path(upgrade_dir_s)
 upgrade_dir.mkdir(parents=True, exist_ok=True)
 final_path = upgrade_dir / filename
-tmp_path = upgrade_dir / f".{filename}.part"
+tmp_path = upgrade_dir / f".{filename}.{os.getpid()}.part"
 
 st = os.statvfs(str(upgrade_dir))
 free_bytes = st.f_bavail * st.f_frsize
@@ -233,7 +233,19 @@ PY
   fi
 
   echo "Installing verified K2 Mainline OTA image: $img_path"
-  sh "$K2_MAINLINE_LOCAL_OTA_BIN" "$img_path" || return 1
+  local ota_out
+  if ! ota_out="$(sh "$K2_MAINLINE_LOCAL_OTA_BIN" "$img_path" 2>&1)"; then
+    printf '%s\n' "$ota_out" >&2
+    return 1
+  fi
+  printf '%s\n' "$ota_out"
+  if ! printf '%s\n' "$ota_out" | grep -q "ota update ok"; then
+    echo "Error: SWUpdate did not confirm 'ota update ok'." >&2
+    if [ -f /mnt/UDISK/swupdate.log ]; then
+      tail -n 20 /mnt/UDISK/swupdate.log >&2 || true
+    fi
+    return 1
+  fi
   echo "K2 Mainline OTA installation finished."
 
   if [ "$no_reboot" != "1" ]; then

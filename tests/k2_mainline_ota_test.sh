@@ -106,9 +106,17 @@ MOCK_OTA="$TMP_DIR/mock_local_ota_update.sh"
 cat > "$MOCK_OTA" <<EOF
 #!/bin/sh
 echo "INSTALLED:\$1" >> "$INSTALL_LOG"
+echo "ota update ok"
 exit 0
 EOF
 chmod +x "$MOCK_OTA"
+MOCK_OTA_SILENT_FAIL="$TMP_DIR/mock_local_ota_silent_fail.sh"
+cat > "$MOCK_OTA_SILENT_FAIL" <<EOF
+#!/bin/sh
+echo "#### update failed 1"
+exit 0
+EOF
+chmod +x "$MOCK_OTA_SILENT_FAIL"
 K2_MAINLINE_LOCAL_OTA_BIN="$MOCK_OTA"
 export HELPER_NONINTERACTIVE K2_OTA_ALLOW_HTTP K2_OTA_NO_REBOOT K2_OTA_MIN_EXTRA_BYTES K2_OTA_CURRENT_VERSION
 
@@ -130,5 +138,12 @@ fi
 K2_MAINLINE_MANIFEST_URL="http://127.0.0.1:${PORT}/manifest-good.json"
 install_k2_mainline_ota >/dev/null
 grep -q "INSTALLED:$K2_MAINLINE_UPGRADE_DIR/CR0CN240110C10_ota_img_V1.1.4.952.img" "$INSTALL_LOG"
+
+# 4. Installer exiting 0 without 'ota update ok' (stock swupdate_cmd.sh behavior on failure) must fail.
+K2_MAINLINE_LOCAL_OTA_BIN="$MOCK_OTA_SILENT_FAIL"
+if install_k2_mainline_ota >/dev/null 2>&1; then
+  echo "FAIL: silent swupdate_cmd.sh failure was treated as success" >&2
+  exit 1
+fi
 
 echo "k2_mainline_ota_test: OK"
