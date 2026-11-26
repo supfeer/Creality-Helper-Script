@@ -37,8 +37,10 @@ function backup_moonraker_database(){
         fi
         cd "$PRINTER_DATA_FOLDER"
         echo -e "Info: Compressing files..."
-        tar -czvf "$KLIPPER_CONFIG_FOLDER"/backup_database.tar.gz database
-        ok_msg "Moonraker database has been saved successfully in ${yellow}/usr/data/printer_data/config ${green}folder!"
+        rm -f "$PRINTER_DATA_FOLDER"/backup_database.tar.gz.tmp
+        tar -czvf "$PRINTER_DATA_FOLDER"/backup_database.tar.gz.tmp database
+        mv "$PRINTER_DATA_FOLDER"/backup_database.tar.gz.tmp "$KLIPPER_CONFIG_FOLDER"/backup_database.tar.gz
+        ok_msg "Moonraker database has been saved successfully in ${yellow}${KLIPPER_CONFIG_FOLDER} ${green}folder!"
         return;;
       N|n)
         error_msg "Backup canceled!"
@@ -58,8 +60,16 @@ function restore_moonraker_database(){
       Y|y)
         echo -e "${white}"
         cd "$PRINTER_DATA_FOLDER"
+        if [ ! -f config/backup_database.tar.gz ] && [ ! -f backup_database.tar.gz ]; then
+          error_msg "Backup archive backup_database.tar.gz not found! Restoration canceled."
+          return 1
+        fi
         if [ -f config/backup_database.tar.gz ]; then
           mv config/backup_database.tar.gz backup_database.tar.gz
+        fi
+        if ! tar -tzf backup_database.tar.gz >/dev/null 2>&1; then
+          error_msg "Backup archive backup_database.tar.gz is invalid! Restoration canceled."
+          return 1
         fi
         if [ -d database ]; then
           rm -rf database

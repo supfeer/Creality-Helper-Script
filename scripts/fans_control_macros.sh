@@ -112,7 +112,7 @@ function remove_fans_control_macros(){
         else
           echo -e "Info: [gcode_macro M141] is already enabled in gcode_macro.cfg file..."
         fi
-        if [ ! -n "$(ls -A "$HS_CONFIG_FOLDER")" ]; then
+        if [ -d "$HS_CONFIG_FOLDER" ] && [ -z "$(ls -A "$HS_CONFIG_FOLDER" 2>/dev/null)" ]; then
           rm -rf "$HS_CONFIG_FOLDER"
         fi
         echo -e "Info: Restarting Klipper service..."

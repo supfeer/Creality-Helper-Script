@@ -71,7 +71,7 @@ function remove_git_backup(){
         fi
         rm -rf "$KLIPPER_CONFIG_FOLDER"/.git
         rm -rf "$HS_BACKUP_FOLDER"/git-backup
-        if [ ! -n "$(ls -A "$HS_BACKUP_FOLDER")" ]; then
+        if [ -d "$HS_BACKUP_FOLDER" ] && [ -z "$(ls -A "$HS_BACKUP_FOLDER" 2>/dev/null)" ]; then
           rm -rf "$HS_BACKUP_FOLDER"
         fi
         if grep -q "include Helper-Script/git-backup" "$PRINTER_CFG" ; then
@@ -86,7 +86,7 @@ function remove_git_backup(){
           "$ENTWARE_FILE" --autoremove remove inotifywait
           set -e
         fi
-        if [ ! -n "$(ls -A "$HS_CONFIG_FOLDER")" ]; then
+        if [ -d "$HS_CONFIG_FOLDER" ] && [ -z "$(ls -A "$HS_CONFIG_FOLDER" 2>/dev/null)" ]; then
           rm -rf "$HS_CONFIG_FOLDER"
         fi
         echo -e "Info: Restarting Klipper service..."

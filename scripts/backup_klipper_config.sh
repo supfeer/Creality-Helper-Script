@@ -37,8 +37,10 @@ function backup_klipper_config_files(){
         fi
         cd "$PRINTER_DATA_FOLDER"
         echo -e "Info: Compressing files..."
-        tar -czvf "$KLIPPER_CONFIG_FOLDER"/backup_config.tar.gz config
-        ok_msg "Klipper configuration files have been saved successfully in ${yellow}/usr/data/printer_data/config ${green}folder!"
+        rm -f "$PRINTER_DATA_FOLDER"/backup_config.tar.gz.tmp
+        tar -czvf "$PRINTER_DATA_FOLDER"/backup_config.tar.gz.tmp config
+        mv "$PRINTER_DATA_FOLDER"/backup_config.tar.gz.tmp "$KLIPPER_CONFIG_FOLDER"/backup_config.tar.gz
+        ok_msg "Klipper configuration files have been saved successfully in ${yellow}${KLIPPER_CONFIG_FOLDER} ${green}folder!"
         return;;
       N|n)
         error_msg "Backup canceled!"
@@ -58,8 +60,16 @@ function restore_klipper_config_files(){
       Y|y)
         echo -e "${white}"
         cd "$PRINTER_DATA_FOLDER"
+        if [ ! -f config/backup_config.tar.gz ] && [ ! -f backup_config.tar.gz ]; then
+          error_msg "Backup archive backup_config.tar.gz not found! Restoration canceled."
+          return 1
+        fi
         if [ -f config/backup_config.tar.gz ]; then
           mv config/backup_config.tar.gz backup_config.tar.gz
+        fi
+        if ! tar -tzf backup_config.tar.gz >/dev/null 2>&1; then
+          error_msg "Backup archive backup_config.tar.gz is invalid! Restoration canceled."
+          return 1
         fi
         if [ -d config ]; then
           rm -rf config

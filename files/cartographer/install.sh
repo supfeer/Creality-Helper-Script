@@ -72,8 +72,9 @@ from pathlib import Path
 path = Path(sys.argv[1])
 text = path.read_text()
 if "lookup_object('scanner')" in text or 'lookup_object("scanner")' in text:
-    print("I: homing.py already patched for scanner")
-    sys.exit(0)
+    scanner_already = True
+else:
+    scanner_already = False
 
 pattern = re.compile(
     r"^(?P<indent>\s*)self\.prtouch_v3\s*=.*lookup_object\([\"\']prtouch_v3[\"\']\).*\n"
@@ -81,26 +82,44 @@ pattern = re.compile(
     re.M,
 )
 match = pattern.search(text)
-if not match:
+if match:
+    indent = match.group("indent")
+    replacement = (
+        f"{indent}self.prtouch_v3 = None\n"
+        f"{indent}if self.printer.objects.get('scanner'):\n"
+        f"{indent}    self.prtouch_v3 = self.printer.lookup_object('scanner')\n"
+        f"{indent}elif self.printer.objects.get('prtouch_v3'):\n"
+        f"{indent}    self.prtouch_v3 = self.printer.lookup_object('prtouch_v3')\n"
+        f"{indent}if self.prtouch_v3 is not None:\n"
+        f"{indent}    self.prtouch_v3.z_full_movement_flag = False\n"
+    )
+    text = pattern.sub(replacement, text, count=1)
+    scanner_already = True
+
+# Guard get_suspended_det_status call for scanners
+pattern2 = re.compile(
+    r"^(?P<indent>\s*)suspended_det_status\s*=\s*self\.prtouch_v3\.get_suspended_det_status\(\)\s*$",
+    re.M,
+)
+match2 = pattern2.search(text)
+if match2:
+    indent = match2.group("indent")
+    replacement2 = (
+        f"{indent}suspended_det_status = False\n"
+        f"{indent}if self.prtouch_v3 is not None and hasattr(self.prtouch_v3, 'get_suspended_det_status'):\n"
+        f"{indent}    suspended_det_status = self.prtouch_v3.get_suspended_det_status()\n"
+    )
+    text = pattern2.sub(replacement2, text, count=1)
+
+if not scanner_already:
     sys.stderr.write("E: unsupported homing.py format for patch\n")
     sys.exit(1)
 
-indent = match.group("indent")
-replacement = (
-    f"{indent}self.prtouch_v3 = None\n"
-    f"{indent}if self.printer.objects.get('scanner'):\n"
-    f"{indent}    self.prtouch_v3 = self.printer.lookup_object('scanner')\n"
-    f"{indent}elif self.printer.objects.get('prtouch_v3'):\n"
-    f"{indent}    self.prtouch_v3 = self.printer.lookup_object('prtouch_v3')\n"
-    f"{indent}if self.prtouch_v3 is not None:\n"
-    f"{indent}    self.prtouch_v3.z_full_movement_flag = False\n"
-)
-
-text = pattern.sub(replacement, text, count=1)
 path.write_text(text)
 print("I: homing.py patched for scanner")
 PY_HOMING
 }
+
 
 
 disable_prtouch_includes() {
@@ -116,6 +135,34 @@ disable_prtouch_includes() {
     }' "$cfg_file" > "${cfg_file}.tmp" && mv "${cfg_file}.tmp" "$cfg_file"
 }
 
+
+remove_save_config_prtouch() {
+    local cfg_file="$1"
+    [ -f "$cfg_file" ] || return 0
+    python - "$cfg_file" <<'PY_SAVE_CFG'
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+lines = path.read_text().splitlines(True)
+out = []
+skip = False
+for line in lines:
+    if line.startswith('#*# [prtouch_v3]'):
+        skip = True
+        continue
+    if skip:
+        if line.startswith('#*# ['):
+            skip = False
+            out.append(line)
+        # else keep skipping lines in prtouch_v3 save_config block
+        continue
+    out.append(line)
+
+path.write_text(''.join(out))
+PY_SAVE_CFG
+}
 
 BACKUP_DIR="/tmp/cartographer-backup-$(date +%s)"
 
@@ -258,6 +305,7 @@ chmod +x /mnt/UDISK/bin/cartographer.sh
 
 # remove the prtouch_v3 section from printer.cfg
 python ${SCRIPT_DIR}/alter_config.py
+remove_save_config_prtouch "$PRINTER_CFG"
 disable_prtouch_includes "$PRINTER_CFG"
 disable_prtouch_includes "$CUSTOM_MAIN"
 # add a commented include to custom/main.cfg

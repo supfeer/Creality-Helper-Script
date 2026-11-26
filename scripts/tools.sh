@@ -36,13 +36,13 @@ function printing_gcode_from_folder_message(){
   bottom_line
 }
 
-function fix_k2plus_homing_cfs_heartbeat_message(){
+function fix_start_print_temps_message(){
   top_line
-  title 'Fix K2 Plus homing shutdown' "${yellow}"
+  title 'Fix START_PRINT bed/extruder temps' "${yellow}"
   inner_line
   hr
-  echo -e " │ ${cyan}This pauses CFS heartbeat traffic while K2 Plus sensorless   ${white}│"
-  echo -e " │ ${cyan}homing is running to reduce MCU timing stalls.               ${white}│"
+  echo -e " │ ${cyan}This keeps bed mesh calibration and box defaults aligned     ${white}│"
+  echo -e " │ ${cyan}with START_PRINT parameters from the Gcode file.             ${white}│"
   hr
   bottom_line
 }
@@ -101,14 +101,51 @@ function reset_factory_settings_message(){
   bottom_line
 }
 
+function fix_trsync_timeout_message(){
+  top_line
+  title 'Fix TRSYNC_TIMEOUT' "${yellow}"
+  inner_line
+  hr
+  echo -e " │ ${cyan}This updates TRSYNC_TIMEOUT to 0.05 in Klipper MCU code.     ${white}│"
+  hr
+  bottom_line
+}
+
+function fix_k2plus_homing_cfs_heartbeat_message(){
+  top_line
+  title 'Fix K2 Plus homing shutdown' "${yellow}"
+  inner_line
+  hr
+  echo -e " │ ${cyan}This pauses CFS heartbeat traffic while K2 Plus sensorless   ${white}│"
+  echo -e " │ ${cyan}homing is running to reduce MCU timing stalls.               ${white}│"
+  hr
+  bottom_line
+}
+
+function _confirm_prompt() {
+  local prompt="$1"
+  local var_name="$2"
+  if [ "${HELPER_NONINTERACTIVE:-0}" = "1" ]; then
+    eval "$var_name=y"
+    return
+  fi
+  if ! read -p "$prompt" "$var_name"; then
+    eval "$var_name=n"
+  fi
+}
+
 function prevent_updating_klipper_files(){
   prevent_updating_klipper_files_message
   local yn
   while true; do
-    read -p "${white} Do you want to prevent updating ${green}Klipper configuration files ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    _confirm_prompt "${white} Do you want to prevent updating ${green}Klipper configuration files ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
     case "${yn}" in
       Y|y)
         echo -e "${white}"
+        if [ ! -f "$INITD_FOLDER"/S55klipper_service ]; then
+          error_msg "S55klipper_service not found on this printer!"
+          return 1
+        fi
         echo -e "Info: Backup file..."
         mv "$INITD_FOLDER"/S55klipper_service "$INITD_FOLDER"/disabled.S55klipper_service
         echo -e "Info: Copying file..."
@@ -132,10 +169,14 @@ function allow_updating_klipper_files(){
   allow_updating_klipper_files_message
   local yn
   while true; do
-    read -p "${white} Do you want to allow updating ${green}Klipper configuration files ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    _confirm_prompt "${white} Do you want to allow updating ${green}Klipper configuration files ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
     case "${yn}" in
       Y|y)
         echo -e "${white}"
+        if [ ! -f "$INITD_FOLDER"/disabled.S55klipper_service ]; then
+          error_msg "Backup disabled.S55klipper_service not found!"
+          return 1
+        fi
         echo -e "Info: Restoring file..."
         rm -f /etc/init.d/S55klipper_service
         mv "$INITD_FOLDER"/disabled.S55klipper_service "$INITD_FOLDER"/S55klipper_service
@@ -156,7 +197,7 @@ function printing_gcode_from_folder(){
   printing_gcode_from_folder_message
   local yn
   while true; do
-    read -p "${white} Do you want to apply fix for ${green}printing Gcode files from folder ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    _confirm_prompt "${white} Do you want to apply fix for ${green}printing Gcode files from folder ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
     case "${yn}" in
       Y|y)
         echo -e "${white}"
@@ -172,6 +213,94 @@ function printing_gcode_from_folder(){
         if [ "$model" = "3V3" ]; then
           ln -sf "$KLIPPER_GCODE_3V3_URL" "$KLIPPER_KLIPPY_FOLDER"/gcode.py
         fi
+        echo -e "Info: Restarting Klipper service..."
+        restart_klipper
+        ok_msg "Fix has been applied successfully!"
+        return;;
+      N|n)
+        error_msg "Installation canceled!"
+        return;;
+      *)
+        error_msg "Please select a correct choice!";;
+    esac
+  done
+}
+
+function fix_start_print_temps(){
+  fix_start_print_temps_message
+  local yn
+  while true; do
+    _confirm_prompt "${white} Do you want to apply fix for ${green}START_PRINT bed/extruder temps ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    case "${yn}" in
+      Y|y)
+        echo -e "${white}"
+        if [ ! -f "$KLIPPER_EXTRAS_FOLDER"/virtual_sdcard.py ]; then
+          error_msg "virtual_sdcard.py not found!"
+          return
+        fi
+        if [ ! -f "$KLIPPER_VIRTUAL_SDCARD_TEMP_PATCH_URL" ] || [ ! -f "$KLIPPER_VIRTUAL_SDCARD_BED_PATCH_URL" ] || [ ! -f "$KLIPPER_VIRTUAL_SDCARD_SKIP_CREALITY_CALIBRATION_PATCH_URL" ]; then
+          error_msg "Patch file not found!"
+          return
+        fi
+        local extruder_applied=0
+        local bed_applied=0
+        local skip_creality_calibration_applied=0
+        if grep -q "update_defaults_from_start_print" "$KLIPPER_EXTRAS_FOLDER"/virtual_sdcard.py; then
+          extruder_applied=1
+        fi
+        if grep -q "get_start_print_bed_temp" "$KLIPPER_EXTRAS_FOLDER"/virtual_sdcard.py; then
+          bed_applied=1
+        fi
+        if grep -q "get_skip_creality_calibration" "$KLIPPER_EXTRAS_FOLDER"/virtual_sdcard.py; then
+          skip_creality_calibration_applied=1
+        fi
+        if [ "$extruder_applied" -eq 1 ] && [ "$bed_applied" -eq 1 ] && [ "$skip_creality_calibration_applied" -eq 1 ]; then
+          ok_msg "Fix is already applied!"
+          return
+        fi
+        if [ "$extruder_applied" -eq 0 ]; then
+          echo -e "Info: Applying extruder temperature fix..."
+          patch -p0 -N < "$KLIPPER_VIRTUAL_SDCARD_TEMP_PATCH_URL"
+        fi
+        if [ "$bed_applied" -eq 0 ]; then
+          echo -e "Info: Applying bed temperature fix..."
+          patch -p0 -N < "$KLIPPER_VIRTUAL_SDCARD_BED_PATCH_URL"
+        fi
+        if [ "$skip_creality_calibration_applied" -eq 0 ]; then
+          echo -e "Info: Applying SKIP_CREALITY_CALIBRATION fix..."
+          patch -p0 -N < "$KLIPPER_VIRTUAL_SDCARD_SKIP_CREALITY_CALIBRATION_PATCH_URL"
+        fi
+        echo -e "Info: Restarting Klipper service..."
+        restart_klipper
+        ok_msg "Fix has been applied successfully!"
+        return;;
+      N|n)
+        error_msg "Installation canceled!"
+        return;;
+      *)
+        error_msg "Please select a correct choice!";;
+    esac
+  done
+}
+
+function fix_trsync_timeout(){
+  fix_trsync_timeout_message
+  local yn
+  while true; do
+    _confirm_prompt "${white} Do you want to apply fix for ${green}TRSYNC_TIMEOUT ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    case "${yn}" in
+      Y|y)
+        echo -e "${white}"
+        if [ ! -f "$KLIPPER_KLIPPY_FOLDER"/mcu.py ]; then
+          error_msg "mcu.py not found!"
+          return
+        fi
+        if grep -q "TRSYNC_TIMEOUT = 0.05" "$KLIPPER_KLIPPY_FOLDER"/mcu.py; then
+          ok_msg "Fix is already applied!"
+          return
+        fi
+        echo -e "Info: Applying TRSYNC_TIMEOUT fix..."
+        sed -i 's/TRSYNC_TIMEOUT = 0.025/TRSYNC_TIMEOUT = 0.05/g' "$KLIPPER_KLIPPY_FOLDER"/mcu.py
         echo -e "Info: Restarting Klipper service..."
         restart_klipper
         ok_msg "Fix has been applied successfully!"
@@ -339,7 +468,7 @@ function fix_k2plus_homing_cfs_heartbeat(){
   fix_k2plus_homing_cfs_heartbeat_message
   local yn
   while true; do
-    read -p "${white} Do you want to apply fix for ${green}K2 Plus homing shutdown ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    _confirm_prompt "${white} Do you want to apply fix for ${green}K2 Plus homing shutdown ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
     case "${yn}" in
       Y|y)
         echo -e "${white}"
@@ -380,10 +509,14 @@ function enable_camera_settings(){
   enable_camera_settings_message
   local yn
   while true; do
-    read -p "${white} Do you want to enable ${green}camera settings in Moonraker ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    _confirm_prompt "${white} Do you want to enable ${green}camera settings in Moonraker ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
     case "${yn}" in
       Y|y)
         echo -e "${white}"
+        if [ ! -f "$MOONRAKER_CFG" ]; then
+          error_msg "moonraker.conf not found!"
+          return 1
+        fi
         if grep -q "#\[webcam Camera\]" "$MOONRAKER_CFG" ; then
           echo -e "Info: Enabling camera settings in moonraker.conf file..."
           sed -i -e 's/^\s*#[[:space:]]*\[webcam Camera\]/[webcam Camera]/' -e '/^\[webcam Camera\]/,/^\s*$/ s/^\(\s*\)#/\1/' "$MOONRAKER_CFG"
@@ -417,10 +550,14 @@ function disable_camera_settings(){
   disable_camera_settings_message
   local yn
   while true; do
-    read -p "${white} Do you want to disable ${green}camera settings in Moonraker ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    _confirm_prompt "${white} Do you want to disable ${green}camera settings in Moonraker ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
     case "${yn}" in
       Y|y)
         echo -e "${white}"
+        if [ ! -f "$MOONRAKER_CFG" ]; then
+          error_msg "moonraker.conf not found!"
+          return 1
+        fi
         if grep -q "\[webcam Camera\]" "$MOONRAKER_CFG" ; then
           echo -e "Info: Disabling camera settings in moonraker.conf file..."
           sed -i '/^\[webcam Camera\]/,/^\s*$/ s/^\(\s*\)\([^#]\)/#\1\2/' "$MOONRAKER_CFG"
@@ -507,10 +644,14 @@ function update_entware_packages(){
   echo
   local yn
   while true; do
-    read -p "${white} Are you sure you want to update ${green}Entware packages ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    _confirm_prompt "${white} Are you sure you want to update ${green}Entware packages ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
     case "${yn}" in
       Y|y)
         echo -e "${white}"
+        if [ ! -x "$ENTWARE_FILE" ]; then
+          error_msg "Entware (opkg) is not installed!"
+          return 1
+        fi
         echo -e "Info: Updating packages list..."
         "$ENTWARE_FILE" update
         echo -e "Info: Updating packages..."
@@ -530,16 +671,21 @@ function clear_cache(){
   echo
   local yn
   while true; do
-    read -p "${white} Are you sure you want to ${green}clear cache ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    _confirm_prompt "${white} Are you sure you want to ${green}clear cache ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
     case "${yn}" in
       Y|y)
         echo -e "${white}"
         echo -e "Info: Clearing root partition cache..."
         rm -rf /root/.cache
-        echo -e "Info: Clearing git cache..."
-        cd "${HELPER_SCRIPT_FOLDER}"
-        git gc --aggressive --prune=all
-        pip cache purge
+        if [ -d "${HELPER_SCRIPT_FOLDER}/.git" ] && command -v git >/dev/null 2>&1; then
+          echo -e "Info: Clearing git cache..."
+          git -C "${HELPER_SCRIPT_FOLDER}" gc --aggressive --prune=all || true
+        fi
+        if command -v pip >/dev/null 2>&1; then
+          pip cache purge || true
+        elif command -v pip3 >/dev/null 2>&1; then
+          pip3 cache purge || true
+        fi
         ok_msg "Cache has been cleared!"
         return;;
       N|n)
@@ -555,7 +701,7 @@ function clear_logs(){
   echo
   local yn
   while true; do
-    read -p "${white} Are you sure you want to clear ${green}logs files ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    _confirm_prompt "${white} Are you sure you want to clear ${green}logs files ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
     case "${yn}" in
       Y|y)
         echo -e "${white}"
@@ -582,7 +728,7 @@ function restore_previous_firmware(){
   restore_previous_firmware_message
   local yn
   while true; do
-    read -p "${white} Do you want to restore a previous firmware ? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    _confirm_prompt "${white} Do you want to restore a previous firmware ? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
     case "${yn}" in
       Y|y)
         if ls /tmp/udisk/sda1/*.img 1> /dev/null 2>&1; then
@@ -609,12 +755,16 @@ function reset_factory_settings(){
   reset_factory_settings_message
   local yn
   while true; do
-    read -p "${white} Are you sure you want to ${green}reset factory settings ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
+    _confirm_prompt "${white} Are you sure you want to ${green}reset factory settings ${white}? (${yellow}y${white}/${yellow}n${white}): ${yellow}" yn
     case "${yn}" in
       Y|y)
         echo -e "${white}"
+        if [ ! -x "$INITD_FOLDER"/S58factoryreset ]; then
+          error_msg "S58factoryreset script not found on this printer!"
+          return 1
+        fi
         "$INITD_FOLDER"/S58factoryreset reset
-        ;;
+        return;;
       N|n)
         error_msg "Reset canceled!"
         return;;

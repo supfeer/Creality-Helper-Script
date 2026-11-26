@@ -31,9 +31,23 @@ function install_custom_boot_display(){
     case "${yn}" in
       Y|y)
         echo -e "${white}"
+        if [ ! -d "$BOOT_DISPLAY_FOLDER" ]; then
+          error_msg "Boot display directory not found on this printer!"
+          return 1
+        fi
         local printer_choice
+        if [ "${HELPER_NONINTERACTIVE:-0}" = "1" ]; then
+          case "$(/usr/bin/get_sn_mac.sh model 2>/dev/null || true)" in
+            *Max*|*MAX*|*max*) printer_choice="k1max" ;;
+            *) printer_choice="k1" ;;
+          esac
+        fi
         while true; do
-          read -p " ${white}Do you want install it for ${yellow}K1${white} or ${yellow}K1 Max${white}? (${yellow}k1${white}/${yellow}k1max${white}): ${yellow}" printer_choice
+          if [ -z "${printer_choice}" ]; then
+            if ! read -p " ${white}Do you want install it for ${yellow}K1${white} or ${yellow}K1 Max${white}? (${yellow}k1${white}/${yellow}k1max${white}): ${yellow}" printer_choice; then
+              printer_choice="k1"
+            fi
+          fi
           case "${printer_choice}" in
             K1|k1)
               echo -e "${white}"
@@ -52,6 +66,7 @@ function install_custom_boot_display(){
               tar -xvf "$BOOT_DISPLAY_K1M_URL" -C "$BOOT_DISPLAY_FOLDER"
               break;;
             *)
+              printer_choice=""
               error_msg "Please select a correct choice!";;
           esac
         done

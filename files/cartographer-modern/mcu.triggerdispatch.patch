@@ -1,0 +1,65 @@
+--- a/mcu.py
++++ b/mcu.py
+@@
+ TRSYNC_TIMEOUT = 0.025
+ TRSYNC_SINGLE_MCU_TIMEOUT = 0.250
++
++# Compatibility shim for cartographer plugin.
++class TriggerDispatch:
++    def __init__(self, mcu):
++        self._mcu = mcu
++        ffi_main, ffi_lib = chelper.get_ffi()
++        self._trdispatch = ffi_main.gc(ffi_lib.trdispatch_alloc(), ffi_lib.free)
++        self._trsyncs = [MCU_trsync(mcu, self._trdispatch)]
++        self._trigger_completion = None
++
++    def add_stepper(self, stepper):
++        trsyncs = {trsync.get_mcu(): trsync for trsync in self._trsyncs}
++        trsync = trsyncs.get(stepper.get_mcu())
++        if trsync is None:
++            trsync = MCU_trsync(stepper.get_mcu(), self._trdispatch)
++            self._trsyncs.append(trsync)
++        trsync.add_stepper(stepper)
++        # Check for unsupported multi-mcu shared stepper rails
++        sname = stepper.get_name()
++        if sname.startswith('stepper_'):
++            for ot in self._trsyncs:
++                for s in ot.get_steppers():
++                    if ot is not trsync and s.get_name().startswith(sname[:9]):
++                        cerror = self._mcu.get_printer().config_error
++                        raise cerror("""{"code": "key287", "msg": "Multi-mcu homing not supported on multi-mcu shared axis", "values":[]}""")
++
++    def get_steppers(self):
++        return [s for trsync in self._trsyncs for s in trsync.get_steppers()]
++
++    def get_oid(self):
++        return self._trsyncs[0].get_oid()
++
++    def start(self, print_time):
++        reactor = self._mcu.get_printer().get_reactor()
++        self._trigger_completion = reactor.completion()
++        expire_timeout = TRSYNC_TIMEOUT
++        if len(self._trsyncs) == 1:
++            expire_timeout = TRSYNC_SINGLE_MCU_TIMEOUT
++        for trsync in self._trsyncs:
++            trsync.start(print_time, self._trigger_completion, expire_timeout)
++        etrsync = self._trsyncs[0]
++        ffi_main, ffi_lib = chelper.get_ffi()
++        ffi_lib.trdispatch_start(self._trdispatch, etrsync.REASON_HOST_REQUEST)
++        return self._trigger_completion
++
++    def wait_end(self, home_end_time):
++        etrsync = self._trsyncs[0]
++        etrsync.set_home_end_time(home_end_time)
++        if self._mcu.is_fileoutput():
++            self._trigger_completion.complete(True)
++        self._trigger_completion.wait()
++
++    def stop(self):
++        ffi_main, ffi_lib = chelper.get_ffi()
++        ffi_lib.trdispatch_stop(self._trdispatch)
++        res = [trsync.stop() for trsync in self._trsyncs]
++        etrsync = self._trsyncs[0]
++        if any([r == etrsync.REASON_COMMS_TIMEOUT for r in res]):
++            return etrsync.REASON_COMMS_TIMEOUT
++        return res[0]

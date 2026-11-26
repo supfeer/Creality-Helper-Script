@@ -64,7 +64,7 @@ function remove_save_zoffset_macros(){
         else
           echo -e "Info: Save Z-Offset Macros configurations are already removed in printer.cfg file..."
         fi
-        if [ ! -n "$(ls -A "$HS_CONFIG_FOLDER")" ]; then
+        if [ -d "$HS_CONFIG_FOLDER" ] && [ -z "$(ls -A "$HS_CONFIG_FOLDER" 2>/dev/null)" ]; then
           rm -rf "$HS_CONFIG_FOLDER"
         fi
         echo -e "Info: Restarting Klipper service..."

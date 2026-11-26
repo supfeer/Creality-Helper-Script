@@ -21,10 +21,13 @@ function _cartographer_require_k2plus() {
 
 function _cartographer_python_bin() {
   local python_bin="/mnt/UDISK/root/klippy-env/bin/python"
+  if [ ! -x "$python_bin" ] && [ -x "/usr/share/klippy-env/bin/python" ]; then
+    python_bin="/usr/share/klippy-env/bin/python"
+  fi
   if [ ! -x "$python_bin" ]; then
     python_bin="$(command -v python3 2>/dev/null || command -v python 2>/dev/null || true)"
   fi
-  if [ -z "$python_bin" ]; then
+  if [ -z "$python_bin" ] || [ ! -x "$python_bin" ]; then
     echo "Error: Python not found."
     return 1
   fi

@@ -93,7 +93,7 @@ function remove_improved_shapers(){
           mv "$HS_BACKUP_FOLDER"/improved-shapers/ft2font.cpython-38-mipsel-linux-gnu.so /usr/lib/python3.8/site-packages/matplotlib
           rm -rf "$HS_BACKUP_FOLDER"/improved-shapers
         fi
-        if [ ! -n "$(ls -A "$HS_BACKUP_FOLDER")" ]; then
+        if [ -d "$HS_BACKUP_FOLDER" ] && [ -z "$(ls -A "$HS_BACKUP_FOLDER" 2>/dev/null)" ]; then
           rm -rf "$HS_BACKUP_FOLDER"
         fi
         echo -e "Info: Removing files..."
@@ -120,7 +120,7 @@ function remove_improved_shapers(){
         else
           echo -e "Info: Improved Shapers Calibrations are already removed in printer.cfg file..."
         fi
-        if [ ! -n "$(ls -A "$HS_CONFIG_FOLDER")" ]; then
+        if [ -d "$HS_CONFIG_FOLDER" ] && [ -z "$(ls -A "$HS_CONFIG_FOLDER" 2>/dev/null)" ]; then
           rm -rf "$HS_CONFIG_FOLDER"
         fi
         echo -e "Info: Restarting Moonraker service..."

@@ -68,7 +68,7 @@ function remove_nozzle_cleaning_fan_control(){
         else
           echo -e "Info: Nozzle Cleaning Fan Control configurations are already removed in printer.cfg file..."
         fi
-        if [ ! -n "$(ls -A "$HS_CONFIG_FOLDER")" ]; then
+        if [ -d "$HS_CONFIG_FOLDER" ] && [ -z "$(ls -A "$HS_CONFIG_FOLDER" 2>/dev/null)" ]; then
           rm -rf "$HS_CONFIG_FOLDER"
         fi
         echo -e "Info: Restarting Klipper service..."
