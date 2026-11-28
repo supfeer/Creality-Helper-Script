@@ -10,6 +10,8 @@ tools_menu_ui_k2plus() {
   subtitle "•$(t 'category.tools_maintenance.label'):"
   menu_option ' 1' "$(t 'item.fix_k2plus_homing_cfs_heartbeat.verb')" "$(t 'item.fix_k2plus_homing_cfs_heartbeat.label')"
   menu_option ' 2' "$(t 'item.fix_trsync_timeout.verb')" "$(t 'item.fix_trsync_timeout.label')"
+  menu_option ' 3' "$(t 'item.install_k2_mainline_ota.verb')" "$(t 'item.install_k2_mainline_ota.label')"
+  menu_option ' 4' "$(t 'item.check_k2_mainline_ota.verb')" "$(t 'item.check_k2_mainline_ota.label')"
   hr
   menu_option '14' 'Fix' 'Stepper too far in past on G28'
   hr
@@ -34,6 +36,12 @@ tools_menu_k2plus() {
         ;;
       2)
         run "fix_trsync_timeout" "tools_menu_ui_k2plus"
+        ;;
+      3)
+        run "install_k2_mainline_ota" "tools_menu_ui_k2plus"
+        ;;
+      4)
+        run "check_k2_mainline_ota" "tools_menu_ui_k2plus"
         ;;
       B|b)
         clear; main_menu; break;;

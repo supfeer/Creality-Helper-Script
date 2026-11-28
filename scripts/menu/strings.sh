@@ -174,6 +174,18 @@ get_string() {
     item.fix_trsync_timeout.label.K2PLUS:ru) echo "TRSYNC_TIMEOUT" ;;
     item.fix_trsync_timeout.verb:en) echo "Fix" ;;
     item.fix_trsync_timeout.verb:ru) echo "Исправить" ;;
+    item.install_k2_mainline_ota.label:en) echo "K2 Mainline Firmware (Klipper 0.14 OTA)" ;;
+    item.install_k2_mainline_ota.label:ru) echo "Прошивка K2 Mainline (Klipper 0.14 OTA)" ;;
+    item.install_k2_mainline_ota.label.K2PLUS:en) echo "K2 Mainline Firmware (Klipper 0.14 OTA)" ;;
+    item.install_k2_mainline_ota.label.K2PLUS:ru) echo "Прошивка K2 Mainline (Klipper 0.14 OTA)" ;;
+    item.install_k2_mainline_ota.verb:en) echo "Install" ;;
+    item.install_k2_mainline_ota.verb:ru) echo "Установить" ;;
+    item.check_k2_mainline_ota.label:en) echo "K2 Mainline OTA Updates" ;;
+    item.check_k2_mainline_ota.label:ru) echo "обновления K2 Mainline OTA" ;;
+    item.check_k2_mainline_ota.label.K2PLUS:en) echo "K2 Mainline OTA Updates" ;;
+    item.check_k2_mainline_ota.label.K2PLUS:ru) echo "обновления K2 Mainline OTA" ;;
+    item.check_k2_mainline_ota.verb:en) echo "Check" ;;
+    item.check_k2_mainline_ota.verb:ru) echo "Проверить" ;;
     item.flash_cartographer_k2plus.label:en) echo "Flash Cartographer Firmware" ;;
     item.flash_cartographer_k2plus.label:ru) echo "Прошить прошивку Cartographer" ;;
     item.flash_cartographer_k2plus.verb:en) echo "Install" ;;

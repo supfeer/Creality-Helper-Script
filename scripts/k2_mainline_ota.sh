@@ -250,6 +250,11 @@ PY
 
   if [ "$no_reboot" != "1" ]; then
     sync
-    reboot
+    if [ "${HELPER_NONINTERACTIVE:-0}" = "1" ]; then
+      echo "Rebooting printer in 2 seconds..."
+      (sleep 2; reboot) >/dev/null 2>&1 </dev/null &
+    else
+      reboot
+    fi
   fi
 }
